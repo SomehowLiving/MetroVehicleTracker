@@ -23,6 +23,43 @@ export const db = getFirestore(app);
 // Initialize Auth
 export const auth = getAuth(app);
 
+// Test Firebase connection and authentication
+export const testFirebaseConnection = async () => {
+  try {
+    console.log("🔥 Testing Firebase connection...");
+    
+    // Test 1: Basic connection
+    console.log("✅ Firebase app initialized:", app.name);
+    console.log("✅ Firestore instance created");
+    console.log("✅ Auth instance created");
+    
+    // Test 2: Write a test document
+    const testDoc = await addDoc(collection(db, "connection-test"), {
+      test: true,
+      timestamp: new Date(),
+      message: "Firebase connection test successful"
+    });
+    console.log("✅ Test document written with ID:", testDoc.id);
+    
+    return {
+      success: true,
+      appName: app.name,
+      testDocId: testDoc.id,
+      config: {
+        projectId: firebaseConfig.projectId,
+        authDomain: firebaseConfig.authDomain
+      }
+    };
+  } catch (error) {
+    console.error("❌ Firebase connection test failed:", error);
+    return {
+      success: false,
+      error: error.message,
+      stack: error.stack
+    };
+  }
+};
+
 // Sample function to write data to Firestore
 export const writeSampleData = async () => {
   try {

@@ -6,7 +6,7 @@ import { BarChart3, LogOut, User, RefreshCw } from "lucide-react";
 import { useRequireAuth } from "@/hooks/use-auth";
 import { useAuth } from "@/lib/auth";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { writeSampleData, writeVehicleEntry } from "@/lib/firebase";
+import { writeSampleData, writeVehicleEntry, testFirebaseConnection } from "@/lib/firebase";
 import { KPICards } from "@/components/kpi-cards";
 import { VehicleTable } from "@/components/vehicle-table";
 import { ExportPanel } from "@/components/export-panel";
@@ -21,11 +21,14 @@ export default function Admin() {
   const { data: storeVehicleCounts, isLoading: storeCountsLoading, error: storeCountsError } = useQuery({
     queryKey: ["/api/dashboard/store-counts", refreshKey],
     queryFn: async () => {
+      console.log("🔄 Fetching store counts...");
       const res = await fetch("/api/dashboard/store-counts");
       if (!res.ok) {
         throw new Error(`Failed to fetch store counts: ${res.status}`);
       }
-      return res.json();
+      const data = await res.json();
+      console.log("📊 Store counts data:", data);
+      return data;
     },
     enabled: !!user,
   });
@@ -33,11 +36,14 @@ export default function Admin() {
   const { data: recentActivity, isLoading: activityLoading, error: activityError } = useQuery({
     queryKey: ["/api/dashboard/recent-activity", refreshKey],
     queryFn: async () => {
+      console.log("🔄 Fetching recent activity...");
       const res = await fetch("/api/dashboard/recent-activity");
       if (!res.ok) {
         throw new Error(`Failed to fetch recent activity: ${res.status}`);
       }
-      return res.json();
+      const data = await res.json();
+      console.log("📋 Recent activity data:", data);
+      return data;
     },
     enabled: !!user,
   });
@@ -57,22 +63,42 @@ export default function Admin() {
 
   const handleFirebaseTest = async () => {
     try {
-      // Test writing to Firestore
+      console.log("🔥 Starting comprehensive Firebase test...");
+      
+      // Test 1: Connection test
+      const connectionResult = await testFirebaseConnection();
+      console.log("Connection test result:", connectionResult);
+      
+      if (!connectionResult.success) {
+        throw new Error(`Connection failed: ${connectionResult.error}`);
+      }
+      
+      // Test 2: Sample data write
       const docId = await writeSampleData();
       
-      // Also test writing a vehicle entry
+      // Test 3: Vehicle entry write
       await writeVehicleEntry({
-        vehicleNumber: "MH12AB3456",
+        vehicleNumber: "TEST" + Date.now(),
         driverName: "Test Driver",
         status: "In",
         storeId: 1,
         storeName: "Metro Mumbai Central"
       });
       
-      alert(`Firebase test successful! Document ID: ${docId}`);
+      const message = `🎉 Firebase tests completed successfully!
+      
+✅ Connection: ${connectionResult.appName}
+✅ Project ID: ${connectionResult.config.projectId}
+✅ Test Document: ${connectionResult.testDocId}
+✅ Sample Data: ${docId}
+✅ Vehicle Entry: Written`;
+      
+      alert(message);
+      console.log("✅ All Firebase tests passed!");
+      
     } catch (error) {
-      console.error("Firebase test failed:", error);
-      alert(`Firebase test failed: ${error.message}`);
+      console.error("❌ Firebase test failed:", error);
+      alert(`❌ Firebase test failed: ${error.message}\n\nCheck console for details`);
     }
   };
 
@@ -160,6 +186,8 @@ export default function Admin() {
                 ) : storeCountsError ? (
                   <div className="text-center py-4 text-red-500">
                     Error loading store data: {storeCountsError.message}
+                    <br />
+                    <small className="text-xs">{storeCountsError.stack}</small>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -172,14 +200,18 @@ export default function Admin() {
                           </div>
                           <div className="flex items-center space-x-2">
                             <span className={`text-sm font-semibold ${store.vehicleCount > 0 ? 'text-success' : 'text-gray-400'}`}>
-                              {store.vehicleCount}
+                              {store.vehicleCount || 0}
                             </span>
                             <span className="text-xs text-gray-500">vehicles</span>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-4 text-gray-500">No store data available</div>
+                      <div className="text-center py-8">
+                        <div className="text-gray-400 mb-2">📊</div>
+                        <div className="text-sm text-gray-500">No store data available</div>
+                        <div className="text-xs text-gray-400 mt-1">Data will appear here when vehicles check in</div>
+                      </div>
                     )}
                   </div>
                 )}

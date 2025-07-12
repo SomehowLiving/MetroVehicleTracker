@@ -26,8 +26,8 @@ interface VehicleTableProps {
 
 export function VehicleTable({ refreshKey }: VehicleTableProps) {
   const [filters, setFilters] = useState({
-    store: "",
-    status: "",
+    store: "all",
+    status: "all",
     search: "",
   });
 
@@ -41,8 +41,8 @@ export function VehicleTable({ refreshKey }: VehicleTableProps) {
 
   const filteredVehicles = activeVehicles?.filter((vehicle: any) => {
     const matchesStore =
-      !filters.store || vehicle.storeId.toString() === filters.store;
-    const matchesStatus = !filters.status || vehicle.status === filters.status;
+      !filters.store || filters.store === "all" || vehicle.storeId.toString() === filters.store;
+    const matchesStatus = !filters.status || filters.status === "all" || vehicle.status === filters.status;
     const matchesSearch =
       !filters.search ||
       vehicle.vehicleNumber
@@ -101,7 +101,7 @@ export function VehicleTable({ refreshKey }: VehicleTableProps) {
             <SelectValue placeholder="All Stores" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Stores</SelectItem>
+            <SelectItem value="all">All Stores</SelectItem>
             {stores?.map((store: any) => (
               <SelectItem key={store.id} value={store.id.toString()}>
                 {store.name}
@@ -120,7 +120,7 @@ export function VehicleTable({ refreshKey }: VehicleTableProps) {
             <SelectValue placeholder="All Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Statuses</SelectItem>
+            <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="In">Checked In</SelectItem>
             <SelectItem value="Out">Checked Out</SelectItem>
           </SelectContent>
