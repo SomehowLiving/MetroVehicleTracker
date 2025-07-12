@@ -101,7 +101,7 @@ export function VehicleTable({ refreshKey }: VehicleTableProps) {
             <SelectValue placeholder="All Stores" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Stores</SelectItem>
+            <SelectItem value="">All Stores</SelectItem>
             {stores?.map((store: any) => (
               <SelectItem key={store.id} value={store.id.toString()}>
                 {store.name}
@@ -120,7 +120,7 @@ export function VehicleTable({ refreshKey }: VehicleTableProps) {
             <SelectValue placeholder="All Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
+            <SelectItem value="">All Statuses</SelectItem>
             <SelectItem value="In">Checked In</SelectItem>
             <SelectItem value="Out">Checked Out</SelectItem>
           </SelectContent>

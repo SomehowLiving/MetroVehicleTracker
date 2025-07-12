@@ -18,14 +18,27 @@ export default function Admin() {
   const { isConnected, lastMessage } = useWebSocket();
   const [refreshKey, setRefreshKey] = useState(0);
 
-  const { data: storeVehicleCounts } = useQuery({
+  const { data: storeVehicleCounts, isLoading: storeCountsLoading, error: storeCountsError } = useQuery({
     queryKey: ["/api/dashboard/store-counts", refreshKey],
-    queryFn: () => fetch("/api/dashboard/store-counts").then(res => res.json()),
+    queryFn: async () => {
+      const res = await fetch("/api/dashboard/store-counts");
+      if (!res.ok) {
+        throw new Error(`Failed to fetch store counts: ${res.status}`);
+      }
+      return res.json();
+    },
+    enabled: !!user,
   });
 
-  const { data: recentActivity } = useQuery({
+  const { data: recentActivity, isLoading: activityLoading, error: activityError } = useQuery({
     queryKey: ["/api/dashboard/recent-activity", refreshKey],
-    queryFn: () => fetch("/api/dashboard/recent-activity").then(res => res.json()),
+    queryFn: async () => {
+      const res = await fetch("/api/dashboard/recent-activity");
+      if (!res.ok) {
+        throw new Error(`Failed to fetch recent activity: ${res.status}`);
+      }
+      return res.json();
+    },
     enabled: !!user,
   });
 
@@ -142,22 +155,34 @@ export default function Admin() {
                 <CardTitle className="text-lg">Store Status</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {storeVehicleCounts?.slice(0, 10).map((store: any) => (
-                    <div key={store.storeId} className="flex items-center justify-between">
-                      <div className="flex items-center space-x-3">
-                        <div className={`w-2 h-2 rounded-full ${store.vehicleCount > 0 ? 'bg-success' : 'bg-gray-300'}`} />
-                        <span className="text-sm text-gray-700">{store.storeName}</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className={`text-sm font-semibold ${store.vehicleCount > 0 ? 'text-success' : 'text-gray-400'}`}>
-                          {store.vehicleCount}
-                        </span>
-                        <span className="text-xs text-gray-500">vehicles</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                {storeCountsLoading ? (
+                  <div className="text-center py-4">Loading store data...</div>
+                ) : storeCountsError ? (
+                  <div className="text-center py-4 text-red-500">
+                    Error loading store data: {storeCountsError.message}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {storeVehicleCounts && storeVehicleCounts.length > 0 ? (
+                      storeVehicleCounts.slice(0, 10).map((store: any) => (
+                        <div key={store.storeId} className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className={`w-2 h-2 rounded-full ${store.vehicleCount > 0 ? 'bg-success' : 'bg-gray-300'}`} />
+                            <span className="text-sm text-gray-700">{store.storeName}</span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className={`text-sm font-semibold ${store.vehicleCount > 0 ? 'text-success' : 'text-gray-400'}`}>
+                              {store.vehicleCount}
+                            </span>
+                            <span className="text-xs text-gray-500">vehicles</span>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-4 text-gray-500">No store data available</div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -170,24 +195,33 @@ export default function Admin() {
                 <CardTitle className="text-lg">Recent Activity</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-3">
-                  {recentActivity?.slice(0, 5).map((activity: any) => (
-                    <div key={activity.id} className="flex items-start space-x-3">
-                      <div className={`w-2 h-2 rounded-full mt-2 ${activity.status === 'In' ? 'bg-success' : 'bg-error'}`} />
-                      <div className="flex-1">
-                        <div className="text-sm text-gray-900">
-                          Vehicle {activity.vehicleNumber} {activity.status === 'In' ? 'checked in' : 'checked out'} at {activity.storeName}
+                {activityLoading ? (
+                  <div className="text-center py-4">Loading activity...</div>
+                ) : activityError ? (
+                  <div className="text-center py-4 text-red-500">
+                    Error loading activity: {activityError.message}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {recentActivity && recentActivity.length > 0 ? (
+                      recentActivity.slice(0, 5).map((activity: any) => (
+                        <div key={activity.id} className="flex items-start space-x-3">
+                          <div className={`w-2 h-2 rounded-full mt-2 ${activity.status === 'In' ? 'bg-success' : 'bg-error'}`} />
+                          <div className="flex-1">
+                            <div className="text-sm text-gray-900">
+                              Vehicle {activity.vehicleNumber} {activity.status === 'In' ? 'checked in' : 'checked out'} at {activity.storeName}
+                            </div>
+                            <div className="text-xs text-gray-500">{new Date(activity.createdAt).toLocaleString()}</div>
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-500">{new Date(activity.createdAt).toLocaleString()}</div>
+                      ))
+                    ) : (
+                      <div className="text-center text-gray-500 py-4">
+                        No recent activity
                       </div>
-                    </div>
-                  ))}
-                  {(!recentActivity || recentActivity.length === 0) && (
-                    <div className="text-center text-gray-500 py-4">
-                      No recent activity
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

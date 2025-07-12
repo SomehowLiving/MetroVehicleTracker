@@ -15,49 +15,71 @@ export function useWebSocket() {
   useEffect(() => {
     if (!user) return;
 
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = window.location.host;
-    const wsUrl = `${protocol}//${host}/ws`;
+    let reconnectAttempts = 0;
+    const maxReconnectAttempts = 5;
+    const reconnectDelay = 3000;
 
-    console.log("Connecting to WebSocket:", wsUrl);
-    ws.current = new WebSocket(wsUrl);
+    const connect = () => {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const host = window.location.host;
+      const wsUrl = `${protocol}//${host}/ws`;
 
-    ws.current.onopen = () => {
-      console.log("WebSocket connected");
-      setIsConnected(true);
-      ws.current?.send(
-        JSON.stringify({
-          type: "auth",
-          data: {
-            userId: user.id,
-            storeId: user.storeId,
-            role: user.role,
-          },
-        })
-      );
+      console.log("Connecting to WebSocket:", wsUrl);
+      ws.current = new WebSocket(wsUrl);
+
+      ws.current.onopen = () => {
+        console.log("WebSocket connected successfully");
+        setIsConnected(true);
+        reconnectAttempts = 0;
+        
+        // Send authentication
+        if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+          ws.current.send(
+            JSON.stringify({
+              type: "auth",
+              data: {
+                userId: user.id,
+                storeId: user.storeId,
+                role: user.role,
+              },
+            })
+          );
+        }
+      };
+
+      ws.current.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data);
+          setLastMessage(message);
+        } catch (error) {
+          console.error("Error parsing WebSocket message:", error);
+        }
+      };
+
+      ws.current.onclose = (event) => {
+        console.log("WebSocket disconnected:", event.code, event.reason);
+        setIsConnected(false);
+        
+        // Attempt to reconnect if not a manual close
+        if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {
+          reconnectAttempts++;
+          console.log(`Attempting to reconnect (${reconnectAttempts}/${maxReconnectAttempts})...`);
+          setTimeout(connect, reconnectDelay);
+        }
+      };
+
+      ws.current.onerror = (error) => {
+        console.error("WebSocket error:", error);
+        setIsConnected(false);
+      };
     };
 
-    ws.current.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        setLastMessage(message);
-      } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
-      }
-    };
-
-    ws.current.onclose = () => {
-      console.log("WebSocket disconnected");
-      setIsConnected(false);
-    };
-
-    ws.current.onerror = (error) => {
-      console.error("WebSocket error:", error);
-      setIsConnected(false);
-    };
+    connect();
 
     return () => {
-      ws.current?.close();
+      if (ws.current) {
+        ws.current.close(1000, "Component unmounting");
+      }
     };
   }, [user]);
 

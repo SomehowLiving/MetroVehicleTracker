@@ -109,6 +109,16 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
     },
   });
 
+  // Handle vehicle selection for checkout
+  const handleVehicleSelect = (vehicleNumber: string) => {
+    const selectedVehicle = activeVehicles?.find((v: any) => v.vehicleNumber === vehicleNumber);
+    if (selectedVehicle && mode === 'checkout') {
+      form.setValue('vehicleNumber', vehicleNumber);
+      form.setValue('driverName', selectedVehicle.driverName);
+      form.setValue('vendorId', selectedVehicle.vendorId?.toString() || '');
+    }
+  };
+
   const handleSubmit = form.handleSubmit((data) => {
     if (mode === 'checkin') {
       vehicleEntryMutation.mutate({
@@ -189,7 +199,10 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
               <div className="space-y-2">
                 <Label htmlFor="vehicleNumber">Vehicle Number</Label>
                 {mode === 'checkout' ? (
-                  <Select {...form.register("vehicleNumber")}>
+                  <Select 
+                    value={form.watch("vehicleNumber")} 
+                    onValueChange={handleVehicleSelect}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select Vehicle" />
                     </SelectTrigger>
@@ -219,6 +232,8 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
                 <Input
                   id="driverName"
                   placeholder="Driver Name"
+                  readOnly={mode === 'checkout'}
+                  className={mode === 'checkout' ? 'bg-gray-100' : ''}
                   {...form.register("driverName")}
                 />
                 {form.formState.errors.driverName && (
