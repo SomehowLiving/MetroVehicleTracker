@@ -1,0 +1,311 @@
+
+🔐 User Roles
+Role
+Description
+Gate Operator
+Assigned to a specific store. Logs vehicle check-ins/outs and manpower info
+Admin
+Full access to all stores, dashboards, analytics, and data exports
+Vendor (opt.)
+Read-only. Receives automated summary emails about their vehicles only.
+
+
+📱 Platform Features
+Responsive web app (mobile + desktop)
+
+
+PWA support (offline-ready, installable)
+
+
+Camera access for capturing driver & manpower photos
+
+
+Real-time Firestore sync
+
+
+Background job: Auto-reporting to vendors every 30 minutes
+
+
+
+🏠 Homepage (Before Login)
+List of all 32 Metro stores
+
+
+Store name & location
+
+
+Login options:
+
+
+Gate Operator Login
+
+
+Admin Login
+
+
+
+🔑 Gate Operator Portal (Post Login)
+📝 Vehicle Entry Form
+Field
+Details
+Vendor Name
+Dropdown or autosuggest
+Vehicle Number
+Unique identifier
+Driver Name
+Text input
+Driver Photo
+Captured via camera
+Manpower
+Loader name + photo, Supervisor name + photo
+Opening KM
+Captured with auto-timestamp
+Closing KM
+Captured on exit with auto-timestamp
+
+
+
+
+
+⚠️ Duplicate Prevention:
+ Validate against existing entries for the same vehicle number within a set time window to prevent duplicate check-ins.
+
+📤 Automated Vendor Reports
+Triggered every 30 minutes by backend scheduler
+
+
+Summary email to each vendor with:
+
+
+Vehicle numbers
+
+
+Driver names
+
+
+Entry/exit times
+
+
+Status (In / Out / Completed)
+
+
+⏱️ Email Job Tech Options:
+Backend Job Scheduler: node-cron or Bull.js
+
+
+Email Services: SendGrid / Mailgun / SMTP
+
+
+Export Format: CSV or download link to file in Firebase Storage
+
+
+
+📊 Admin Dashboard
+Live Views
+Vehicles currently on premises
+
+
+Store-wise vehicle breakdown
+
+
+Live feed with photo, driver, and entry details
+
+
+History Table
+All entries/exits across stores
+
+
+Filters: store, vehicle, vendor, date, status
+
+
+Activity Timeline
+Chronological events across all stores
+
+
+KPIs
+Total check-ins (daily)
+
+
+Average time per vehicle
+
+
+Late departures / extended stays
+
+
+Export Tools
+Export to CSV / Excel / PDF
+
+
+Filter by: store, vendor, date range
+
+
+Option: “Send export to my email”
+
+
+UX: “Export” button with toast + auto-refresh
+
+
+
+📁 Firestore Data Structure
+Firestore uses collections and documents. Here’s the denormalized model:
+stores/{storeId}
+id, name, location
+
+
+users/{userId}
+id, name, role (admin / gate_operator)
+
+
+email, password_hash
+
+
+store_id (nullable for admin)
+
+
+vendors/{vendorId}
+id, name, email
+
+
+vehicles/{vehicleId}
+vehicle_number (unique)
+
+
+vendor_id, driver_name, driver_photo_url
+
+
+created_at
+
+
+checkins/{checkinId}
+vehicle_id, store_id
+
+
+opening_km, opening_km_timestamp
+
+
+closing_km, closing_km_timestamp
+
+
+status (In/Out/Completed), created_at
+
+
+Denormalized fields: vehicle_number, vendor_name (for faster queries)
+
+
+checkins/{checkinId}/manpower/{manpowerId}
+name, role (loader/supervisor), photo_url
+
+
+
+⚙️ Tech Stack
+Layer
+Tech Choices
+Frontend
+React (with Vite), Tailwind CSS, PWA support
+Camera
+getUserMedia() + canvas in-browser
+Backend
+Node.js + Express
+Database
+Firestore (NoSQL, real-time, offline-first)
+Auth
+JWT-based login, role-based access
+Storage
+Firebase Storage (for photos)
+Real-time
+Socket.io (for admin live dashboard updates)
+Emailing
+SendGrid / SMTP, scheduled via node-cron / Bull
+Exporting
+json2csv, exceljs
+
+
+📤 Export Handling
+Formats: CSV, Excel
+
+
+Filters: date range, vendor, store
+
+
+Storage: Firebase Storage (if large)
+
+
+Export destination:
+
+
+Email with attachment (if <10MB)
+
+
+Email with download link (if >10MB)
+
+
+Optional: Auto-scheduled exports (daily, weekly)
+
+
+
+🧠 Data Formatting Guidelines
+Field
+Format
+Timestamps
+ISO or DD/MM/YYYY HH:mm
+KM Readings
+With units (e.g. 12345 km)
+Photo Links
+Optional in export (as URL)
+Manpower Data
+Flatten: loader_name, supervisor_name
+
+
+🔍 Firestore Query Indexing Tips
+Required Composite Indexes:
+checkins: store_id + status + created_at
+
+
+checkins: vendor_id + created_at
+
+
+vehicles: vehicle_number (unique)
+
+
+📌 Create indexes via Firebase console if prompted by query errors.
+
+🧹 Housekeeping / Optimization
+📸 Image Compression:
+
+
+Use <canvas> to resize before upload
+
+
+Max size: 640×480 (gate photos don’t need HD)
+
+
+🧺 Folder Naming:
+
+ swift
+CopyEdit
+/photos/YYYY/MM/DD/store_id/vehicle_photo.jpg
+
+
+🗑️ Photo Cleanup:
+
+
+Auto-delete old photos after 90 days
+
+
+Use Firebase Scheduled Function
+
+
+
+🔄 Best Practices
+Use denormalized fields in checkins for fast lookups
+
+
+Keep nested subcollections only where needed (e.g. manpower)
+
+
+Always manage Firestore indexes explicitly
+
+
+Add real-time feedback via Socket.io for admins
+
+
