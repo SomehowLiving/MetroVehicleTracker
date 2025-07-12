@@ -1,0 +1,533 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(20, 14.3%, 4.1%);
+  --muted: hsl(60, 4.8%, 95.9%);
+  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(20, 14.3%, 4.1%);
+  --border: hsl(20, 5.9%, 90%);
+  --input: hsl(20, 5.9%, 90%);
+  --primary: hsl(220, 100%, 20%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(51, 100%, 50%);
+  --secondary-foreground: hsl(220, 100%, 20%);
+  --accent: hsl(51, 100%, 50%);
+  --accent-foreground: hsl(220, 100%, 20%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --ring: hsl(20, 14.3%, 4.1%);
+  --radius: 0.5rem;
+  
+  /* Metro Brand Colors */
+  --metro-blue: hsl(220, 100%, 20%);
+  --metro-yellow: hsl(51, 100%, 50%);
+  --metro-deep-blue: hsl(220, 100%, 15%);
+  --metro-orange: hsl(20, 100%, 50%);
+  --metro-gray: hsl(220, 14%, 96%);
+  --success: hsl(145, 63%, 42%);
+  --warning: hsl(45, 93%, 62%);
+  --error: hsl(0, 84%, 58%);
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(220, 100%, 20%);
+  --primary-foreground: hsl(0, 0%, 100%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --radius: 0.5rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .bg-metro-blue {
+    background-color: var(--metro-blue);
+  }
+  
+  .bg-metro-yellow {
+    background-color: var(--metro-yellow);
+  }
+  
+  .bg-metro-deep-blue {
+    background-color: var(--metro-deep-blue);
+  }
+  
+  .bg-metro-orange {
+    background-color: var(--metro-orange);
+  }
+  
+  .bg-metro-gray {
+    background-color: var(--metro-gray);
+  }
+  
+  .bg-success {
+    background-color: var(--success);
+  }
+  
+  .bg-warning {
+    background-color: var(--warning);
+  }
+  
+  .bg-error {
+    background-color: var(--error);
+  }
+  
+  .text-metro-blue {
+    color: var(--metro-blue);
+  }
+  
+  .text-metro-yellow {
+    color: var(--metro-yellow);
+  }
+  
+  .text-metro-deep-blue {
+    color: var(--metro-deep-blue);
+  }
+  
+  .text-metro-orange {
+    color: var(--metro-orange);
+  }
+  
+  .text-success {
+    color: var(--success);
+  }
+  
+  .text-warning {
+    color: var(--warning);
+  }
+  
+  .text-error {
+    color: var(--error);
+  }
+  
+  .border-metro-blue {
+    border-color: var(--metro-blue);
+  }
+  
+  .border-metro-yellow {
+    border-color: var(--metro-yellow);
+  }
+  
+  .hover\:bg-metro-deep-blue:hover {
+    background-color: var(--metro-deep-blue);
+  }
+  
+  .hover\:bg-yellow-400:hover {
+    background-color: hsl(51, 100%, 60%);
+  }
+  
+  .focus\:ring-metro-blue:focus {
+    --tw-ring-color: var(--metro-blue);
+  }
+
+  /* Success/Warning/Error variants for badges and status indicators */
+  .bg-success\/10 {
+    background-color: hsl(145, 63%, 42%, 0.1);
+  }
+  
+  .bg-warning\/10 {
+    background-color: hsl(45, 93%, 62%, 0.1);
+  }
+  
+  .bg-error\/10 {
+    background-color: hsl(0, 84%, 58%, 0.1);
+  }
+  
+  .bg-metro-blue\/10 {
+    background-color: hsl(220, 100%, 30%, 0.1);
+  }
+
+  /* Additional utility classes for Metro branding */
+  .gradient-metro {
+    background: linear-gradient(135deg, var(--metro-blue), var(--metro-deep-blue));
+  }
+  
+  .shadow-metro {
+    box-shadow: 0 4px 6px -1px hsl(220, 100%, 30%, 0.1), 0 2px 4px -1px hsl(220, 100%, 30%, 0.06);
+  }
+  
+  /* PWA-specific styles */
+  .pwa-install-prompt {
+    @apply fixed bottom-4 right-4 bg-metro-blue text-white p-4 rounded-lg shadow-lg;
+  }
+  
+  /* Camera modal styles */
+  .camera-overlay {
+    @apply fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center;
+  }
+  
+  .camera-modal {
+    @apply bg-white rounded-xl p-6 max-w-md w-full mx-4;
+  }
+  
+  /* Status indicator styles */
+  .status-online {
+    @apply w-2 h-2 bg-success rounded-full;
+  }
+  
+  .status-offline {
+    @apply w-2 h-2 bg-error rounded-full;
+  }
+  
+  .status-warning {
+    @apply w-2 h-2 bg-warning rounded-full;
+  }
+  
+  /* Vehicle status cards */
+  .vehicle-card {
+    @apply bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow cursor-pointer;
+  }
+  
+  .vehicle-card:hover .vehicle-icon {
+    @apply bg-metro-yellow;
+  }
+  
+  .vehicle-card:hover .vehicle-icon svg {
+    @apply text-metro-blue;
+  }
+  
+  /* Form enhancements */
+  .form-section {
+    @apply bg-metro-gray rounded-lg p-4 space-y-4;
+  }
+  
+  /* Table enhancements */
+  .data-table {
+    @apply w-full border-collapse;
+  }
+  
+  .data-table th {
+    @apply bg-metro-gray text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider;
+  }
+  
+  .data-table td {
+    @apply px-4 py-4 whitespace-nowrap border-b border-gray-200;
+  }
+  
+  .data-table tr:hover {
+    @apply bg-gray-50;
+  }
+  
+  /* Export panel styles */
+  .export-card {
+    @apply bg-white rounded-xl shadow-lg p-6;
+  }
+  
+  .export-button {
+    @apply w-full bg-metro-blue text-white px-4 py-2 rounded-lg hover:bg-metro-deep-blue transition-colors font-semibold;
+  }
+  
+  .export-button-secondary {
+    @apply w-full bg-metro-yellow text-metro-blue px-4 py-2 rounded-lg hover:bg-yellow-400 transition-colors font-semibold;
+  }
+  
+  /* Dashboard specific styles */
+  .dashboard-card {
+    @apply bg-white rounded-xl shadow-lg p-6;
+  }
+  
+  .kpi-card {
+    @apply bg-white rounded-xl shadow-lg p-6;
+  }
+  
+  .kpi-value {
+    @apply text-2xl font-bold text-gray-900;
+  }
+  
+  .kpi-label {
+    @apply text-sm font-medium text-gray-500;
+  }
+  
+  .kpi-change {
+    @apply text-sm text-gray-600;
+  }
+  
+  /* Navigation styles */
+  .nav-header {
+    @apply bg-white shadow-lg sticky top-0 z-50;
+  }
+  
+  .nav-brand {
+    @apply w-10 h-10 bg-metro-blue rounded-lg flex items-center justify-center;
+  }
+  
+  .nav-title {
+    @apply text-lg font-bold text-gray-900;
+  }
+  
+  .nav-subtitle {
+    @apply text-sm text-gray-600;
+  }
+  
+  /* Responsive design enhancements */
+  @media (max-width: 768px) {
+    .mobile-hidden {
+      @apply hidden;
+    }
+    
+    .mobile-full {
+      @apply w-full;
+    }
+    
+    .mobile-stack {
+      @apply flex-col space-y-2;
+    }
+  }
+  
+  /* Print styles for reports */
+  @media print {
+    .print-hidden {
+      @apply hidden;
+    }
+    
+    .print-page-break {
+      page-break-before: always;
+    }
+  }
+  
+  /* Accessibility enhancements */
+  .sr-only {
+    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+  }
+  
+  .focus-visible {
+    @apply focus:outline-none focus:ring-2 focus:ring-metro-blue focus:ring-offset-2;
+  }
+  
+  /* Loading states */
+  .loading-spinner {
+    @apply animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-metro-blue;
+  }
+  
+  .loading-skeleton {
+    @apply animate-pulse bg-gray-300 rounded;
+  }
+  
+  /* Toast and notification styles */
+  .toast-success {
+    @apply bg-success text-white;
+  }
+  
+  .toast-error {
+    @apply bg-error text-white;
+  }
+  
+  .toast-warning {
+    @apply bg-warning text-gray-900;
+  }
+  
+  .toast-info {
+    @apply bg-metro-blue text-white;
+  }
+  
+  /* Button hover states for Metro branding */
+  .btn-metro-primary {
+    @apply bg-metro-blue text-white hover:bg-metro-deep-blue focus:ring-metro-blue;
+  }
+  
+  .btn-metro-secondary {
+    @apply bg-metro-yellow text-metro-blue hover:bg-yellow-400 focus:ring-metro-yellow;
+  }
+  
+  .btn-metro-outline {
+    @apply border-metro-blue text-metro-blue hover:bg-metro-blue hover:text-white;
+  }
+  
+  /* Card hover effects */
+  .card-hover {
+    @apply hover:shadow-metro transition-shadow duration-200;
+  }
+  
+  /* Status badges */
+  .badge-success {
+    @apply bg-success/10 text-success border-success/20;
+  }
+  
+  .badge-warning {
+    @apply bg-warning/10 text-warning border-warning/20;
+  }
+  
+  .badge-error {
+    @apply bg-error/10 text-error border-error/20;
+  }
+  
+  .badge-info {
+    @apply bg-metro-blue/10 text-metro-blue border-metro-blue/20;
+  }
+  
+  /* Vehicle entry form specific styles */
+  .vehicle-form {
+    @apply bg-white rounded-xl shadow-lg p-6;
+  }
+  
+  .vehicle-form .form-group {
+    @apply space-y-2;
+  }
+  
+  .vehicle-form .form-label {
+    @apply block text-sm font-medium text-gray-700;
+  }
+  
+  .vehicle-form .form-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-metro-blue focus:border-transparent;
+  }
+  
+  .vehicle-form .form-select {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-metro-blue focus:border-transparent;
+  }
+  
+  /* Photo capture area */
+  .photo-capture {
+    @apply border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-metro-blue transition-colors;
+  }
+  
+  .photo-capture.has-photo {
+    @apply border-success bg-success/5;
+  }
+  
+  /* Data table enhancements */
+  .data-table-wrapper {
+    @apply overflow-x-auto rounded-lg border border-gray-200;
+  }
+  
+  .data-table thead {
+    @apply bg-metro-gray;
+  }
+  
+  .data-table tbody tr {
+    @apply hover:bg-gray-50 transition-colors;
+  }
+  
+  .data-table .status-badge {
+    @apply inline-flex items-center px-2 py-1 text-xs font-medium rounded-full;
+  }
+  
+  /* Real-time indicators */
+  .live-indicator {
+    @apply flex items-center space-x-2;
+  }
+  
+  .live-indicator.online {
+    @apply text-success;
+  }
+  
+  .live-indicator.offline {
+    @apply text-error;
+  }
+  
+  .live-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+  
+  .live-dot.online {
+    @apply bg-success animate-pulse;
+  }
+  
+  .live-dot.offline {
+    @apply bg-error;
+  }
+  
+  /* Export panel specific styles */
+  .export-panel {
+    @apply bg-white rounded-xl shadow-lg p-6 space-y-4;
+  }
+  
+  .export-panel .date-range {
+    @apply grid grid-cols-1 gap-2;
+  }
+  
+  .export-panel .quick-actions {
+    @apply grid grid-cols-2 gap-2;
+  }
+  
+  /* Mobile optimizations */
+  @media (max-width: 640px) {
+    .mobile-grid {
+      @apply grid-cols-1;
+    }
+    
+    .mobile-stack {
+      @apply flex-col space-y-2;
+    }
+    
+    .mobile-full-width {
+      @apply w-full;
+    }
+    
+    .mobile-text-sm {
+      @apply text-sm;
+    }
+  }
+  
+  /* High contrast mode support */
+  @media (prefers-contrast: high) {
+    .high-contrast {
+      @apply border-2 border-black;
+    }
+  }
+  
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    .reduce-motion {
+      @apply transition-none animate-none;
+    }
+  }
+  
+  /* Focus management for accessibility */
+  .focus-trap {
+    @apply focus:outline-none focus:ring-2 focus:ring-metro-blue focus:ring-offset-2;
+  }
+  
+  /* Screen reader only content */
+  .sr-only {
+    @apply absolute w-px h-px p-0 -m-px overflow-hidden whitespace-nowrap border-0;
+  }
+  
+  /* Print optimizations */
+  @media print {
+    .print-hide {
+      @apply hidden;
+    }
+    
+    .print-show {
+      @apply block;
+    }
+    
+    .print-break {
+      page-break-before: always;
+    }
+    
+    .print-no-break {
+      page-break-inside: avoid;
+    }
+  }
+}
