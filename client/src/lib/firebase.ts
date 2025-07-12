@@ -2,10 +2,9 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc, collection, addDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-const apiKey = process.env['FIREBASE_API_KEY']
-// Firebase configuration - replace with your actual config
+// Firebase configuration
 const firebaseConfig = {
-  
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyBYour-API-Key-Here",
   authDomain: "metrovehicletracker.firebaseapp.com",
   projectId: "metrovehicletracker",
   storageBucket: "metrovehicletracker.firebasestorage.app",

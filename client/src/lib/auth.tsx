@@ -56,13 +56,13 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
 
       const data = await response.json();
 
+      // Set user and token first
       setUser(data.user);
       localStorage.setItem("auth_token", data.token);
 
-      // Small delay to allow state propagation before navigation
-      setTimeout(() => {
-        setLocation(role === "admin" ? "/admin" : "/gate-operator");
-      }, 100);
+      // Navigate immediately after setting state
+      const targetPath = role === "admin" ? "/admin" : "/gate-operator";
+      setLocation(targetPath);
 
       return true;
     } catch (err) {

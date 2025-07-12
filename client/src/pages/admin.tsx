@@ -6,6 +6,7 @@ import { BarChart3, LogOut, User, RefreshCw } from "lucide-react";
 import { useRequireAuth } from "@/hooks/use-auth";
 import { useAuth } from "@/lib/auth";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { writeSampleData, writeVehicleEntry } from "@/lib/firebase";
 import { KPICards } from "@/components/kpi-cards";
 import { VehicleTable } from "@/components/vehicle-table";
 import { ExportPanel } from "@/components/export-panel";
@@ -19,10 +20,12 @@ export default function Admin() {
 
   const { data: storeVehicleCounts } = useQuery({
     queryKey: ["/api/dashboard/store-counts", refreshKey],
+    queryFn: () => fetch("/api/dashboard/store-counts").then(res => res.json()),
   });
 
   const { data: recentActivity } = useQuery({
     queryKey: ["/api/dashboard/recent-activity", refreshKey],
+    queryFn: () => fetch("/api/dashboard/recent-activity").then(res => res.json()),
     enabled: !!user,
   });
 
@@ -39,9 +42,25 @@ export default function Admin() {
     return null;
   }
 
-  const handleFirebaseTest = () => {
-    alert("Firebase test button clicked!");
-    // Here you can add the Firebase write logic
+  const handleFirebaseTest = async () => {
+    try {
+      // Test writing to Firestore
+      const docId = await writeSampleData();
+      
+      // Also test writing a vehicle entry
+      await writeVehicleEntry({
+        vehicleNumber: "MH12AB3456",
+        driverName: "Test Driver",
+        status: "In",
+        storeId: 1,
+        storeName: "Metro Mumbai Central"
+      });
+      
+      alert(`Firebase test successful! Document ID: ${docId}`);
+    } catch (error) {
+      console.error("Firebase test failed:", error);
+      alert(`Firebase test failed: ${error.message}`);
+    }
   };
 
   return (

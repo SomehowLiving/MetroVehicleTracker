@@ -120,7 +120,7 @@ export function VehicleTable({ refreshKey }: VehicleTableProps) {
             <SelectValue placeholder="All Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
+            <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="In">Checked In</SelectItem>
             <SelectItem value="Out">Checked Out</SelectItem>
           </SelectContent>
@@ -292,7 +292,7 @@ export function VehicleTable({ refreshKey }: VehicleTableProps) {
 //             <SelectValue placeholder="All Status" />
 //           </SelectTrigger>
 //           <SelectContent>
-//             <SelectItem value="">All Status</SelectItem>
+//             <SelectItem value="">All Statuses</SelectItem>
 //             <SelectItem value="In">Checked In</SelectItem>
 //             <SelectItem value="Out">Checked Out</SelectItem>
 //           </SelectContent>
