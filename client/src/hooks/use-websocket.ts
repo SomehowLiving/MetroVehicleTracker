@@ -15,9 +15,12 @@ export function useWebSocket() {
   useEffect(() => {
     if (!user) return;
 
+    // Fix WebSocket URL construction for both local and Replit deployment
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const wsUrl = `${protocol}//${window.location.host}/ws`;
+    const host = window.location.host;
+    const wsUrl = `${protocol}//${host}/ws`;
     
+    console.log('Connecting to WebSocket:', wsUrl); // Debug log
     ws.current = new WebSocket(wsUrl);
 
     ws.current.onopen = () => {

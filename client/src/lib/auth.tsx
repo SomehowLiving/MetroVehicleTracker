@@ -46,16 +46,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }): JSX.E
         role
       });
       
+      if (!response.ok) {
+        throw new Error('Login failed');
+      }
+      
       const data = await response.json();
+      
+      // Set user and token first
       setUser(data.user);
       localStorage.setItem("auth_token", data.token);
       
-      // Redirect based on role
-      if (role === "admin") {
-        setLocation("/admin");
-      } else {
-        setLocation("/gate-operator");
-      }
+      // Use setTimeout to ensure state updates before navigation
+      setTimeout(() => {
+        if (role === "admin") {
+          setLocation("/admin");
+        } else {
+          setLocation("/gate-operator");
+        }
+      }, 100);
       
       return true;
     } catch (error) {
