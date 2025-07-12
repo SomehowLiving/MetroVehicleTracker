@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Building, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -14,7 +15,8 @@ export default function Login() {
   const [formData, setFormData] = useState({ username: "", password: "" });
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-
+  const [showPassword, setShowPassword] = useState(false);
+  const togglePasswordVisibility = () => setShowPassword(!showPassword);
   // Get role from URL params
   const urlParams = new URLSearchParams(window.location.search);
   const role = urlParams.get("role") || "gate_operator";
@@ -60,7 +62,7 @@ export default function Login() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
-            
+
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
@@ -68,22 +70,35 @@ export default function Login() {
                   id="username"
                   type="text"
                   value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, username: e.target.value })
+                  }
                   placeholder="Enter your username"
                   required
                 />
               </div>
-              
-              <div className="space-y-2">
+
+              <div className="space-y-2 relative">
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
                   placeholder="Enter your password"
                   required
+                  className="pr-10"
                 />
+                <button
+                  type="button"
+                  onClick={togglePasswordVisibility}
+                  className="absolute right-2 top-[38px] text-gray-500 hover:text-gray-700"
+                  aria-label="Toggle password visibility"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
 
               <Button
@@ -112,7 +127,7 @@ export default function Login() {
                 <p>Username: operator1, Password: operator123</p>
               </div>
             )}
-            
+
             {role === "admin" && (
               <div className="text-center text-sm text-gray-600">
                 <p>Demo credentials:</p>
