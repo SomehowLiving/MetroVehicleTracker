@@ -2,16 +2,18 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc, collection, addDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-
+const apiKey = process.env['FIREBASE_API_KEY']
 // Firebase configuration - replace with your actual config
 const firebaseConfig = {
-  apiKey: "your-api-key",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-  storageBucket: "your-project.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "your-app-id"
+  
+  authDomain: "metrovehicletracker.firebaseapp.com",
+  projectId: "metrovehicletracker",
+  storageBucket: "metrovehicletracker.firebasestorage.app",
+  messagingSenderId: "419507510469",
+  appId: "1:419507510469:web:6455debdf840fb644c64ac",
+  measurementId: "G-DF7DKWQ2ZC"
 };
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
