@@ -6,7 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Camera, Save, LogIn, LogOut } from "lucide-react";
@@ -14,6 +20,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import CameraModal from "./camera-modal";
 import { z } from "zod";
+import { Controller } from "react-hook-form";
 
 const vehicleFormSchema = z.object({
   vendorId: z.string().min(1, "Vendor is required"),
@@ -32,11 +39,11 @@ interface VehicleFormProps {
 export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [mode, setMode] = useState<'checkin' | 'checkout'>('checkin');
+  const [mode, setMode] = useState<"checkin" | "checkout">("checkin");
   const [cameraModal, setCameraModal] = useState<{
     isOpen: boolean;
-    type: 'driver' | 'loader' | 'supervisor';
-  }>({ isOpen: false, type: 'driver' });
+    type: "driver" | "loader" | "supervisor";
+  }>({ isOpen: false, type: "driver" });
   const [photos, setPhotos] = useState<{
     driver?: string;
     loader?: string;
@@ -71,22 +78,41 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
         operatorId,
         driverPhotoUrl: photos.driver,
         manpower: [
-          ...(data.loaderName ? [{ name: data.loaderName, role: 'loader', photoUrl: photos.loader }] : []),
-          ...(data.supervisorName ? [{ name: data.supervisorName, role: 'supervisor', photoUrl: photos.supervisor }] : [])
-        ].filter(Boolean)
+          ...(data.loaderName
+            ? [
+                {
+                  name: data.loaderName,
+                  role: "loader",
+                  photoUrl: photos.loader,
+                },
+              ]
+            : []),
+          ...(data.supervisorName
+            ? [
+                {
+                  name: data.supervisorName,
+                  role: "supervisor",
+                  photoUrl: photos.supervisor,
+                },
+              ]
+            : []),
+        ].filter(Boolean),
       });
     },
     onSuccess: () => {
-      toast({ title: "Success", description: "Vehicle checked in successfully" });
+      toast({
+        title: "Success",
+        description: "Vehicle checked in successfully",
+      });
       form.reset();
       setPhotos({});
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
     },
     onError: (error: any) => {
-      toast({ 
-        title: "Error", 
+      toast({
+        title: "Error",
         description: error.message || "Failed to check in vehicle",
-        variant: "destructive"
+        variant: "destructive",
       });
     },
   });
@@ -96,31 +122,36 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
       return await apiRequest("POST", "/api/vehicles/exit", data);
     },
     onSuccess: () => {
-      toast({ title: "Success", description: "Vehicle checked out successfully" });
+      toast({
+        title: "Success",
+        description: "Vehicle checked out successfully",
+      });
       form.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
     },
     onError: (error: any) => {
-      toast({ 
-        title: "Error", 
+      toast({
+        title: "Error",
         description: error.message || "Failed to check out vehicle",
-        variant: "destructive"
+        variant: "destructive",
       });
     },
   });
 
   // Handle vehicle selection for checkout
   const handleVehicleSelect = (vehicleNumber: string) => {
-    const selectedVehicle = activeVehicles?.find((v: any) => v.vehicleNumber === vehicleNumber);
-    if (selectedVehicle && mode === 'checkout') {
-      form.setValue('vehicleNumber', vehicleNumber);
-      form.setValue('driverName', selectedVehicle.driverName);
-      form.setValue('vendorId', selectedVehicle.vendorId?.toString() || '');
+    const selectedVehicle = activeVehicles?.find(
+      (v: any) => v.vehicleNumber === vehicleNumber,
+    );
+    if (selectedVehicle && mode === "checkout") {
+      form.setValue("vehicleNumber", vehicleNumber);
+      form.setValue("driverName", selectedVehicle.driverName);
+      form.setValue("vendorId", selectedVehicle.vendorId?.toString() || "");
     }
   };
 
   const handleSubmit = form.handleSubmit((data) => {
-    if (mode === 'checkin') {
+    if (mode === "checkin") {
       vehicleEntryMutation.mutate({
         ...data,
         vendorId: parseInt(data.vendorId),
@@ -128,7 +159,9 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
       });
     } else {
       // Handle checkout logic
-      const selectedVehicle = activeVehicles?.find((v: any) => v.vehicleNumber === data.vehicleNumber);
+      const selectedVehicle = activeVehicles?.find(
+        (v: any) => v.vehicleNumber === data.vehicleNumber,
+      );
       if (selectedVehicle) {
         vehicleExitMutation.mutate({
           checkinId: selectedVehicle.id,
@@ -139,10 +172,10 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
   });
 
   const handleCameraCapture = (photoDataUrl: string) => {
-    setPhotos(prev => ({ ...prev, [cameraModal.type]: photoDataUrl }));
+    setPhotos((prev) => ({ ...prev, [cameraModal.type]: photoDataUrl }));
   };
 
-  const openCamera = (type: 'driver' | 'loader' | 'supervisor') => {
+  const openCamera = (type: "driver" | "loader" | "supervisor") => {
     setCameraModal({ isOpen: true, type });
   };
 
@@ -154,17 +187,21 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
             <CardTitle className="text-xl">Vehicle Entry/Exit</CardTitle>
             <div className="flex items-center space-x-2">
               <Button
-                variant={mode === 'checkin' ? 'default' : 'outline'}
-                onClick={() => setMode('checkin')}
-                className={mode === 'checkin' ? 'bg-success hover:bg-green-600' : ''}
+                variant={mode === "checkin" ? "default" : "outline"}
+                onClick={() => setMode("checkin")}
+                className={
+                  mode === "checkin" ? "bg-success hover:bg-green-600" : ""
+                }
               >
                 <LogIn className="mr-2 h-4 w-4" />
                 Check In
               </Button>
               <Button
-                variant={mode === 'checkout' ? 'default' : 'outline'}
-                onClick={() => setMode('checkout')}
-                className={mode === 'checkout' ? 'bg-error hover:bg-red-600' : ''}
+                variant={mode === "checkout" ? "default" : "outline"}
+                onClick={() => setMode("checkout")}
+                className={
+                  mode === "checkout" ? "bg-error hover:bg-red-600" : ""
+                }
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 Check Out
@@ -178,7 +215,7 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
               {/* Vendor Selection */}
               <div className="space-y-2">
                 <Label htmlFor="vendorId">Vendor Name</Label>
-                <Select {...form.register("vendorId")}>
+                {/* <Select {...form.register("vendorId")}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select Vendor" />
                   </SelectTrigger>
@@ -189,18 +226,42 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
                       </SelectItem>
                     ))}
                   </SelectContent>
-                </Select>
+                </Select> */}
+                <Controller
+                  name="vendorId"
+                  control={form.control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Vendor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {vendors?.map((vendor: any) => (
+                          <SelectItem
+                            key={vendor.id}
+                            value={vendor.id.toString()}
+                          >
+                            {vendor.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+
                 {form.formState.errors.vendorId && (
-                  <p className="text-sm text-red-600">{form.formState.errors.vendorId.message}</p>
+                  <p className="text-sm text-red-600">
+                    {form.formState.errors.vendorId.message}
+                  </p>
                 )}
               </div>
 
               {/* Vehicle Number */}
               <div className="space-y-2">
                 <Label htmlFor="vehicleNumber">Vehicle Number</Label>
-                {mode === 'checkout' ? (
-                  <Select 
-                    value={form.watch("vehicleNumber")} 
+                {mode === "checkout" ? (
+                  <Select
+                    value={form.watch("vehicleNumber")}
                     onValueChange={handleVehicleSelect}
                   >
                     <SelectTrigger>
@@ -208,7 +269,10 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
                     </SelectTrigger>
                     <SelectContent>
                       {activeVehicles?.map((vehicle: any) => (
-                        <SelectItem key={vehicle.id} value={vehicle.vehicleNumber}>
+                        <SelectItem
+                          key={vehicle.id}
+                          value={vehicle.vehicleNumber}
+                        >
                           {vehicle.vehicleNumber} - {vehicle.driverName}
                         </SelectItem>
                       ))}
@@ -222,7 +286,9 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
                   />
                 )}
                 {form.formState.errors.vehicleNumber && (
-                  <p className="text-sm text-red-600">{form.formState.errors.vehicleNumber.message}</p>
+                  <p className="text-sm text-red-600">
+                    {form.formState.errors.vehicleNumber.message}
+                  </p>
                 )}
               </div>
 
@@ -232,18 +298,22 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
                 <Input
                   id="driverName"
                   placeholder="Driver Name"
-                  readOnly={mode === 'checkout'}
-                  className={mode === 'checkout' ? 'bg-gray-100' : ''}
+                  readOnly={mode === "checkout"}
+                  className={mode === "checkout" ? "bg-gray-100" : ""}
                   {...form.register("driverName")}
                 />
                 {form.formState.errors.driverName && (
-                  <p className="text-sm text-red-600">{form.formState.errors.driverName.message}</p>
+                  <p className="text-sm text-red-600">
+                    {form.formState.errors.driverName.message}
+                  </p>
                 )}
               </div>
 
               {/* Opening/Closing KM */}
               <div className="space-y-2">
-                <Label htmlFor="openingKm">{mode === 'checkin' ? 'Opening KM' : 'Closing KM'}</Label>
+                <Label htmlFor="openingKm">
+                  {mode === "checkin" ? "Opening KM" : "Closing KM"}
+                </Label>
                 <Input
                   id="openingKm"
                   type="number"
@@ -259,31 +329,39 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
               <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                 {photos.driver ? (
                   <div className="space-y-2">
-                    <img src={photos.driver} alt="Driver" className="w-32 h-32 object-cover rounded-lg mx-auto" />
+                    <img
+                      src={photos.driver}
+                      alt="Driver"
+                      className="w-32 h-32 object-cover rounded-lg mx-auto"
+                    />
                     <Badge variant="secondary">Photo captured</Badge>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <Camera className="h-12 w-12 text-gray-400 mx-auto" />
-                    <p className="text-sm text-gray-600">Click to capture driver photo</p>
+                    <p className="text-sm text-gray-600">
+                      Click to capture driver photo
+                    </p>
                   </div>
                 )}
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => openCamera('driver')}
+                  onClick={() => openCamera("driver")}
                   className="mt-2"
                 >
                   <Camera className="mr-2 h-4 w-4" />
-                  {photos.driver ? 'Retake Photo' : 'Capture Photo'}
+                  {photos.driver ? "Retake Photo" : "Capture Photo"}
                 </Button>
               </div>
             </div>
 
             {/* Manpower Details */}
-            {mode === 'checkin' && (
+            {mode === "checkin" && (
               <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">Manpower Details</h3>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Manpower Details
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <Label htmlFor="loaderName">Loader Name</Label>
@@ -296,11 +374,11 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => openCamera('loader')}
+                      onClick={() => openCamera("loader")}
                       className="text-metro-blue hover:text-metro-deep-blue"
                     >
                       <Camera className="mr-1 h-4 w-4" />
-                      {photos.loader ? 'Retake Photo' : 'Capture Photo'}
+                      {photos.loader ? "Retake Photo" : "Capture Photo"}
                     </Button>
                   </div>
                   <div className="space-y-2">
@@ -314,11 +392,11 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => openCamera('supervisor')}
+                      onClick={() => openCamera("supervisor")}
                       className="text-metro-blue hover:text-metro-deep-blue"
                     >
                       <Camera className="mr-1 h-4 w-4" />
-                      {photos.supervisor ? 'Retake Photo' : 'Capture Photo'}
+                      {photos.supervisor ? "Retake Photo" : "Capture Photo"}
                     </Button>
                   </div>
                 </div>
@@ -330,12 +408,15 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
               <Button
                 type="submit"
                 className="bg-metro-blue hover:bg-metro-deep-blue"
-                disabled={vehicleEntryMutation.isPending || vehicleExitMutation.isPending}
+                disabled={
+                  vehicleEntryMutation.isPending ||
+                  vehicleExitMutation.isPending
+                }
               >
                 <Save className="mr-2 h-4 w-4" />
-                {vehicleEntryMutation.isPending || vehicleExitMutation.isPending 
-                  ? "Saving..." 
-                  : `Save ${mode === 'checkin' ? 'Entry' : 'Exit'}`}
+                {vehicleEntryMutation.isPending || vehicleExitMutation.isPending
+                  ? "Saving..."
+                  : `Save ${mode === "checkin" ? "Entry" : "Exit"}`}
               </Button>
             </div>
           </form>
@@ -344,7 +425,7 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
 
       <CameraModal
         isOpen={cameraModal.isOpen}
-        onClose={() => setCameraModal({ isOpen: false, type: 'driver' })}
+        onClose={() => setCameraModal({ isOpen: false, type: "driver" })}
         onCapture={handleCameraCapture}
         title={`Capture ${cameraModal.type} Photo`}
       />

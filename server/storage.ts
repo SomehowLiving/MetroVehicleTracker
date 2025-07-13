@@ -1,376 +1,392 @@
-import { eq, and, gte, lte, desc, count } from 'drizzle-orm';
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
-import { 
-  stores, users, vendors, vehicles, checkins, manpower,
-  type Store, type User, type Vendor, type Vehicle, type Checkin, type Manpower,
-  type InsertStore, type InsertUser, type InsertVendor, type InsertVehicle, 
-  type InsertCheckin, type InsertManpower 
+import { eq, and, gte, lte, desc, count } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
+import {
+  stores,
+  users,
+  vendors,
+  vehicles,
+  checkins,
+  manpower,
+  type Store,
+  type User,
+  type Vendor,
+  type Vehicle,
+  type Checkin,
+  type Manpower,
+  type InsertStore,
+  type InsertUser,
+  type InsertVendor,
+  type InsertVehicle,
+  type InsertCheckin,
+  type InsertManpower,
 } from "@shared/schema";
 
 // Database connection
 if (!process.env.DATABASE_URL) {
-  console.error('❌ DATABASE_URL environment variable is not set');
-  console.log('Available env vars:', Object.keys(process.env).filter(key => key.includes('DATABASE')));
-  throw new Error('DATABASE_URL is not set');
+  console.error("❌ DATABASE_URL environment variable is not set");
+  console.log(
+    "Available env vars:",
+    Object.keys(process.env).filter((key) => key.includes("DATABASE")),
+  );
+  throw new Error("DATABASE_URL is not set");
 }
 
-console.log('🔗 Connecting to database...');
-console.log('🔗 Database URL hostname:', new URL(process.env.DATABASE_URL).hostname);
+console.log("🔗 Connecting to database...");
+console.log(
+  "🔗 Database URL hostname:",
+  new URL(process.env.DATABASE_URL).hostname,
+);
 
 const client = postgres(process.env.DATABASE_URL, {
   ssl: { rejectUnauthorized: false }, // Force SSL for Supabase
   onnotice: () => {}, // Suppress notices
   max: 10,
   idle_timeout: 20,
-  connect_timeout: 10s
+  connect_timeout: 10,
 });
 const db = drizzle(client);
 
 // Test database connection
-client`SELECT 1`.then(() => {
-  console.log('✅ Database connected successfully');
-}).catch((error) => {
-  console.error('❌ Database connection failed:', error.message);
-  console.error('❌ Full error:', error);
-  console.log('💡 Check your DATABASE_URL in Secrets/Environment variables');
-  console.log('💡 Ensure your Supabase database is running and accessible');
-});
-
+client`SELECT 1`
+  .then(() => {
+    console.log("✅ Database connected successfully");
+  })
+  .catch((error) => {
+    console.error("❌ Database connection failed:", error.message);
+    console.error("❌ Full error:", error);
+    console.log("💡 Check your DATABASE_URL in Secrets/Environment variables");
+    console.log("💡 Ensure your Supabase database is running and accessible");
+  });
 
 export interface IStorage {
   // Users
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserById(id: number): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
-  
+
   // Stores
   getAllStores(): Promise<Store[]>;
   getStoreById(id: number): Promise<Store | undefined>;
   createStore(store: InsertStore): Promise<Store>;
-  
+
   // Vendors
   getAllVendors(): Promise<Vendor[]>;
   getVendorById(id: number): Promise<Vendor | undefined>;
   createVendor(vendor: InsertVendor): Promise<Vendor>;
-  
+
   // Vehicles
   getVehicleByNumber(vehicleNumber: string): Promise<Vehicle | undefined>;
   getVehicleById(id: number): Promise<Vehicle | undefined>;
   createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
   updateVehicle(id: number, updates: Partial<Vehicle>): Promise<Vehicle>;
-  
+
   // Checkins
   getCheckinById(id: number): Promise<Checkin | undefined>;
   getActiveCheckins(storeId?: number): Promise<Checkin[]>;
-  getCheckinsByDateRange(startDate: Date, endDate: Date, storeId?: number): Promise<Checkin[]>;
+  getCheckinsByDateRange(
+    startDate: Date,
+    endDate: Date,
+    storeId?: number,
+  ): Promise<Checkin[]>;
   getCheckinsByVehicle(vehicleNumber: string): Promise<Checkin[]>;
   createCheckin(checkin: InsertCheckin): Promise<Checkin>;
   updateCheckin(id: number, updates: Partial<Checkin>): Promise<Checkin>;
-  
+
   // Manpower
   getManpowerByCheckinId(checkinId: number): Promise<Manpower[]>;
   createManpower(manpower: InsertManpower): Promise<Manpower>;
-  
+
   // Dashboard queries
   getTodaysCheckinsCount(storeId?: number): Promise<number>;
   getCurrentlyInsideCount(storeId?: number): Promise<number>;
   getExtendedStaysCount(storeId?: number): Promise<number>;
-  getStoreVehicleCounts(): Promise<{ storeId: number; storeName: string; vehicleCount: number }[]>;
+  getStoreVehicleCounts(): Promise<
+    { storeId: number; storeName: string; vehicleCount: number }[]
+  >;
 }
 
 export class PostgresStorage implements IStorage {
   // User methods
-    async getUserByUsername(username: string): Promise<User | undefined> {
-      const result = await db
-        .select()
-        .from(users)
-        .where(eq(users.username, username))
-        .limit(1);
-      return result[0];
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const result = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, username))
+      .limit(1);
+    return result[0];
+  }
+
+  async getUserById(id: number): Promise<User | undefined> {
+    const result = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async createUser(user: InsertUser): Promise<User> {
+    const result = await db.insert(users).values(user).returning();
+    return result[0];
+  }
+
+  // Store methods
+  async getAllStores(): Promise<Store[]> {
+    return await db.select().from(stores);
+  }
+
+  async getStoreById(id: number): Promise<Store | undefined> {
+    const result = await db
+      .select()
+      .from(stores)
+      .where(eq(stores.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async createStore(store: InsertStore): Promise<Store> {
+    const result = await db.insert(stores).values(store).returning();
+    return result[0];
+  }
+
+  // Vendor methods
+  async getAllVendors(): Promise<Vendor[]> {
+    return await db.select().from(vendors);
+  }
+
+  async getVendorById(id: number): Promise<Vendor | undefined> {
+    const result = await db
+      .select()
+      .from(vendors)
+      .where(eq(vendors.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async createVendor(vendor: InsertVendor): Promise<Vendor> {
+    const result = await db.insert(vendors).values(vendor).returning();
+    return result[0];
+  }
+
+  // Vehicle methods
+  async getVehicleByNumber(
+    vehicleNumber: string,
+  ): Promise<Vehicle | undefined> {
+    const result = await db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.vehicleNumber, vehicleNumber))
+      .limit(1);
+    return result[0];
+  }
+
+  async getVehicleById(id: number): Promise<Vehicle | undefined> {
+    const result = await db
+      .select()
+      .from(vehicles)
+      .where(eq(vehicles.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async createVehicle(vehicle: InsertVehicle): Promise<Vehicle> {
+    const result = await db.insert(vehicles).values(vehicle).returning();
+    return result[0];
+  }
+
+  async updateVehicle(id: number, updates: Partial<Vehicle>): Promise<Vehicle> {
+    const result = await db
+      .update(vehicles)
+      .set(updates)
+      .where(eq(vehicles.id, id))
+      .returning();
+
+    if (!result[0]) {
+      throw new Error(`Vehicle with id ${id} not found`);
+    }
+    return result[0];
+  }
+
+  // Checkin methods
+  async getCheckinById(id: number): Promise<Checkin | undefined> {
+    const result = await db
+      .select()
+      .from(checkins)
+      .where(eq(checkins.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  async getActiveCheckins(storeId?: number): Promise<Checkin[]> {
+    const conditions = [eq(checkins.status, "In")];
+    if (storeId) {
+      conditions.push(eq(checkins.storeId, storeId));
     }
 
-    async getUserById(id: number): Promise<User | undefined> {
-      const result = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, id))
-        .limit(1);
-      return result[0];
+    return await db
+      .select()
+      .from(checkins)
+      .where(and(...conditions))
+      .orderBy(desc(checkins.createdAt));
+  }
+
+  async getCheckinsByDateRange(
+    startDate: Date,
+    endDate: Date,
+    storeId?: number,
+  ): Promise<Checkin[]> {
+    const conditions = [
+      gte(checkins.createdAt, startDate),
+      lte(checkins.createdAt, endDate),
+    ];
+    if (storeId) {
+      conditions.push(eq(checkins.storeId, storeId));
     }
 
-    async createUser(user: InsertUser): Promise<User> {
-      const result = await db
-        .insert(users)
-        .values(user)
-        .returning();
-      return result[0];
+    return await db
+      .select()
+      .from(checkins)
+      .where(and(...conditions))
+      .orderBy(desc(checkins.createdAt));
+  }
+
+  async getCheckinsByVehicle(vehicleNumber: string): Promise<Checkin[]> {
+    return await db
+      .select()
+      .from(checkins)
+      .where(eq(checkins.vehicleNumber, vehicleNumber))
+      .orderBy(desc(checkins.createdAt));
+  }
+
+  async createCheckin(checkin: InsertCheckin): Promise<Checkin> {
+    const result = await db.insert(checkins).values(checkin).returning();
+    return result[0];
+  }
+
+  async updateCheckin(id: number, updates: Partial<Checkin>): Promise<Checkin> {
+    const result = await db
+      .update(checkins)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(checkins.id, id))
+      .returning();
+
+    if (!result[0]) {
+      throw new Error(`Checkin with id ${id} not found`);
+    }
+    return result[0];
+  }
+
+  // Manpower methods
+  async getManpowerByCheckinId(checkinId: number): Promise<Manpower[]> {
+    return await db
+      .select()
+      .from(manpower)
+      .where(eq(manpower.checkinId, checkinId));
+  }
+
+  async createManpower(manpowerData: InsertManpower): Promise<Manpower> {
+    const result = await db.insert(manpower).values(manpowerData).returning();
+    return result[0];
+  }
+
+  // Dashboard methods
+  async getTodaysCheckinsCount(storeId?: number): Promise<number> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const conditions = [
+      gte(checkins.createdAt, today),
+      lte(checkins.createdAt, tomorrow),
+    ];
+    if (storeId) {
+      conditions.push(eq(checkins.storeId, storeId));
     }
 
-    // Store methods
-    async getAllStores(): Promise<Store[]> {
-      return await db.select().from(stores);
+    const result = await db
+      .select({ count: count() })
+      .from(checkins)
+      .where(and(...conditions));
+
+    return result[0].count;
+  }
+
+  async getCurrentlyInsideCount(storeId?: number): Promise<number> {
+    const conditions = [eq(checkins.status, "In")];
+    if (storeId) {
+      conditions.push(eq(checkins.storeId, storeId));
     }
 
-    async getStoreById(id: number): Promise<Store | undefined> {
-      const result = await db
-        .select()
-        .from(stores)
-        .where(eq(stores.id, id))
-        .limit(1);
-      return result[0];
+    const result = await db
+      .select({ count: count() })
+      .from(checkins)
+      .where(and(...conditions));
+
+    return result[0].count;
+  }
+
+  async getExtendedStaysCount(storeId?: number): Promise<number> {
+    const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
+
+    const conditions = [
+      eq(checkins.status, "In"),
+      lte(checkins.createdAt, fourHoursAgo),
+    ];
+    if (storeId) {
+      conditions.push(eq(checkins.storeId, storeId));
     }
 
-    async createStore(store: InsertStore): Promise<Store> {
-      const result = await db
-        .insert(stores)
-        .values(store)
-        .returning();
-      return result[0];
-    }
+    const result = await db
+      .select({ count: count() })
+      .from(checkins)
+      .where(and(...conditions));
 
-    // Vendor methods
-    async getAllVendors(): Promise<Vendor[]> {
-      return await db.select().from(vendors);
-    }
+    return result[0].count;
+  }
 
-    async getVendorById(id: number): Promise<Vendor | undefined> {
-      const result = await db
-        .select()
-        .from(vendors)
-        .where(eq(vendors.id, id))
-        .limit(1);
-      return result[0];
-    }
+  // async getStoreVehicleCounts(): Promise<{ storeId: number; storeName: string; vehicleCount: number }[]> {
+  //   const allStores = await this.getAllStores();
+  //   const result = [];
 
-    async createVendor(vendor: InsertVendor): Promise<Vendor> {
-      const result = await db
-        .insert(vendors)
-        .values(vendor)
-        .returning();
-      return result[0];
-    }
+  //   for (const store of allStores) {
+  //     const vehicleCount = await this.getCurrentlyInsideCount(store.id);
+  //     result.push({
+  //       storeId: store.id,
+  //       storeName: store.name,
+  //       vehicleCount
+  //     });
+  //   }
 
-    // Vehicle methods
-    async getVehicleByNumber(vehicleNumber: string): Promise<Vehicle | undefined> {
-      const result = await db
-        .select()
-        .from(vehicles)
-        .where(eq(vehicles.vehicleNumber, vehicleNumber))
-        .limit(1);
-      return result[0];
-    }
-
-    async getVehicleById(id: number): Promise<Vehicle | undefined> {
-      const result = await db
-        .select()
-        .from(vehicles)
-        .where(eq(vehicles.id, id))
-        .limit(1);
-      return result[0];
-    }
-
-    async createVehicle(vehicle: InsertVehicle): Promise<Vehicle> {
-      const result = await db
-        .insert(vehicles)
-        .values(vehicle)
-        .returning();
-      return result[0];
-    }
-
-    async updateVehicle(id: number, updates: Partial<Vehicle>): Promise<Vehicle> {
-      const result = await db
-        .update(vehicles)
-        .set(updates)
-        .where(eq(vehicles.id, id))
-        .returning();
-
-      if (!result[0]) {
-        throw new Error(`Vehicle with id ${id} not found`);
-      }
-      return result[0];
-    }
-
-    // Checkin methods
-    async getCheckinById(id: number): Promise<Checkin | undefined> {
-      const result = await db
-        .select()
-        .from(checkins)
-        .where(eq(checkins.id, id))
-        .limit(1);
-      return result[0];
-    }
-
-    async getActiveCheckins(storeId?: number): Promise<Checkin[]> {
-      const conditions = [eq(checkins.status, 'In')];
-      if (storeId) {
-        conditions.push(eq(checkins.storeId, storeId));
-      }
-
-      return await db
-        .select()
-        .from(checkins)
-        .where(and(...conditions))
-        .orderBy(desc(checkins.createdAt));
-    }
-
-    async getCheckinsByDateRange(startDate: Date, endDate: Date, storeId?: number): Promise<Checkin[]> {
-      const conditions = [
-        gte(checkins.createdAt, startDate),
-        lte(checkins.createdAt, endDate)
-      ];
-      if (storeId) {
-        conditions.push(eq(checkins.storeId, storeId));
-      }
-
-      return await db
-        .select()
-        .from(checkins)
-        .where(and(...conditions))
-        .orderBy(desc(checkins.createdAt));
-    }
-
-    async getCheckinsByVehicle(vehicleNumber: string): Promise<Checkin[]> {
-      return await db
-        .select()
-        .from(checkins)
-        .where(eq(checkins.vehicleNumber, vehicleNumber))
-        .orderBy(desc(checkins.createdAt));
-    }
-
-    async createCheckin(checkin: InsertCheckin): Promise<Checkin> {
-      const result = await db
-        .insert(checkins)
-        .values(checkin)
-        .returning();
-      return result[0];
-    }
-
-    async updateCheckin(id: number, updates: Partial<Checkin>): Promise<Checkin> {
-      const result = await db
-        .update(checkins)
-        .set({ ...updates, updatedAt: new Date() })
-        .where(eq(checkins.id, id))
-        .returning();
-
-      if (!result[0]) {
-        throw new Error(`Checkin with id ${id} not found`);
-      }
-      return result[0];
-    }
-
-    // Manpower methods
-    async getManpowerByCheckinId(checkinId: number): Promise<Manpower[]> {
-      return await db
-        .select()
-        .from(manpower)
-        .where(eq(manpower.checkinId, checkinId));
-    }
-
-    async createManpower(manpowerData: InsertManpower): Promise<Manpower> {
-      const result = await db
-        .insert(manpower)
-        .values(manpowerData)
-        .returning();
-      return result[0];
-    }
-
-    // Dashboard methods
-    async getTodaysCheckinsCount(storeId?: number): Promise<number> {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      const conditions = [
-        gte(checkins.createdAt, today),
-        lte(checkins.createdAt, tomorrow)
-      ];
-      if (storeId) {
-        conditions.push(eq(checkins.storeId, storeId));
-      }
-
-      const result = await db
-        .select({ count: count() })
-        .from(checkins)
-        .where(and(...conditions));
-
-      return result[0].count;
-    }
-
-    async getCurrentlyInsideCount(storeId?: number): Promise<number> {
-      const conditions = [eq(checkins.status, 'In')];
-      if (storeId) {
-        conditions.push(eq(checkins.storeId, storeId));
-      }
-
-      const result = await db
-        .select({ count: count() })
-        .from(checkins)
-        .where(and(...conditions));
-
-      return result[0].count;
-    }
-
-    async getExtendedStaysCount(storeId?: number): Promise<number> {
-      const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
-
-      const conditions = [
-        eq(checkins.status, 'In'),
-        lte(checkins.createdAt, fourHoursAgo)
-      ];
-      if (storeId) {
-        conditions.push(eq(checkins.storeId, storeId));
-      }
-
-      const result = await db
-        .select({ count: count() })
-        .from(checkins)
-        .where(and(...conditions));
-
-      return result[0].count;
-    }
-
-    // async getStoreVehicleCounts(): Promise<{ storeId: number; storeName: string; vehicleCount: number }[]> {
-    //   const allStores = await this.getAllStores();
-    //   const result = [];
-
-    //   for (const store of allStores) {
-    //     const vehicleCount = await this.getCurrentlyInsideCount(store.id);
-    //     result.push({
-    //       storeId: store.id,
-    //       storeName: store.name,
-    //       vehicleCount
-    //     });
-    //   }
-
-    //   return result;
-    // }
-  async getStoreVehicleCounts(): Promise<{ storeId: number; storeName: string; vehicleCount: number }[]> {
+  //   return result;
+  // }
+  async getStoreVehicleCounts(): Promise<
+    { storeId: number; storeName: string; vehicleCount: number }[]
+  > {
     const result = await db
       .select({
         storeId: stores.id,
         storeName: stores.name,
-        vehicleCount: count(checkins.id)
+        vehicleCount: count(checkins.id),
       })
       .from(stores)
-      .leftJoin(checkins, and(
-        eq(checkins.storeId, stores.id),
-        eq(checkins.status, 'In')
-      ))
+      .leftJoin(
+        checkins,
+        and(eq(checkins.storeId, stores.id), eq(checkins.status, "In")),
+      )
       .groupBy(stores.id, stores.name)
       .orderBy(stores.name);
 
-    return result.map(row => ({
+    return result.map((row) => ({
       storeId: row.storeId,
       storeName: row.storeName,
-      vehicleCount: row.vehicleCount
+      vehicleCount: row.vehicleCount,
     }));
   }
+}
 
-  }
-
-  export const storage = new PostgresStorage();
+export const storage = new PostgresStorage();
 
 //   private stores: Map<number, Store>;
 //   private users: Map<number, User>;
@@ -378,7 +394,7 @@ export class PostgresStorage implements IStorage {
 //   private vehicles: Map<number, Vehicle>;
 //   private checkins: Map<number, Checkin>;
 //   private manpower: Map<number, Manpower>;
-  
+
 //   private currentStoreId: number = 1;
 //   private currentUserId: number = 1;
 //   private currentVendorId: number = 1;
@@ -393,7 +409,7 @@ export class PostgresStorage implements IStorage {
 //     this.vehicles = new Map();
 //     this.checkins = new Map();
 //     this.manpower = new Map();
-    
+
 //     this.initializeMockData();
 //   }
 
@@ -553,7 +569,7 @@ export class PostgresStorage implements IStorage {
 
 //   // Vehicle methods
 //   async getVehicleByNumber(vehicleNumber: string): Promise<Vehicle | undefined> {
-//     return Array.from(this.vehicles.values()).find(vehicle => 
+//     return Array.from(this.vehicles.values()).find(vehicle =>
 //       vehicle.vehicleNumber === vehicleNumber
 //     );
 //   }
@@ -579,7 +595,7 @@ export class PostgresStorage implements IStorage {
 //   }
 
 //   async getActiveCheckins(storeId?: number): Promise<Checkin[]> {
-//     const checkins = Array.from(this.checkins.values()).filter(checkin => 
+//     const checkins = Array.from(this.checkins.values()).filter(checkin =>
 //       checkin.status === "In" && (!storeId || checkin.storeId === storeId)
 //     );
 //     return checkins.sort((a, b) => {
@@ -603,7 +619,7 @@ export class PostgresStorage implements IStorage {
 //   }
 
 //   async getCheckinsByVehicle(vehicleNumber: string): Promise<Checkin[]> {
-//     const checkins = Array.from(this.checkins.values()).filter(checkin => 
+//     const checkins = Array.from(this.checkins.values()).filter(checkin =>
 //       checkin.vehicleNumber === vehicleNumber
 //     );
 //     return checkins.sort((a, b) => {
@@ -634,7 +650,7 @@ export class PostgresStorage implements IStorage {
 //     if (!checkin) {
 //       throw new Error(`Checkin with id ${id} not found`);
 //     }
-    
+
 //     const updatedCheckin: Checkin = {
 //       ...checkin,
 //       ...updates,
@@ -665,7 +681,7 @@ export class PostgresStorage implements IStorage {
 //     today.setHours(0, 0, 0, 0);
 //     const tomorrow = new Date(today);
 //     tomorrow.setDate(tomorrow.getDate() + 1);
-    
+
 //     const checkins = await this.getCheckinsByDateRange(today, tomorrow, storeId);
 //     return checkins.length;
 //   }
@@ -678,8 +694,8 @@ export class PostgresStorage implements IStorage {
 //   async getExtendedStaysCount(storeId?: number): Promise<number> {
 //     const activeCheckins = await this.getActiveCheckins(storeId);
 //     const fourHoursAgo = new Date(Date.now() - 4 * 60 * 60 * 1000);
-    
-//     return activeCheckins.filter(checkin => 
+
+//     return activeCheckins.filter(checkin =>
 //       checkin.createdAt && checkin.createdAt < fourHoursAgo
 //     ).length;
 //   }
@@ -687,7 +703,7 @@ export class PostgresStorage implements IStorage {
 //   async getStoreVehicleCounts(): Promise<{ storeId: number; storeName: string; vehicleCount: number }[]> {
 //     const stores = await this.getAllStores();
 //     const result = [];
-    
+
 //     for (const store of stores) {
 //       const count = await this.getCurrentlyInsideCount(store.id);
 //       result.push({
@@ -696,7 +712,7 @@ export class PostgresStorage implements IStorage {
 //         vehicleCount: count
 //       });
 //     }
-    
+
 //     return result;
 //   }
 // }
