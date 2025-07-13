@@ -10,11 +10,24 @@ import {
 
 // Database connection
 if (!process.env.DATABASE_URL) {
+  console.error('❌ DATABASE_URL environment variable is not set');
+  console.log('Available env vars:', Object.keys(process.env).filter(key => key.includes('DATABASE')));
   throw new Error('DATABASE_URL is not set');
 }
 
-const client = postgres(process.env.DATABASE_URL);
+console.log('🔗 Connecting to database...');
+const client = postgres(process.env.DATABASE_URL, {
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  onnotice: () => {}, // Suppress notices
+});
 const db = drizzle(client);
+
+// Test database connection
+client`SELECT 1`.then(() => {
+  console.log('✅ Database connected successfully');
+}).catch((error) => {
+  console.error('❌ Database connection failed:', error.message);
+});
 
 
 export interface IStorage {

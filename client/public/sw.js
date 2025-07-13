@@ -1,4 +1,4 @@
-const CACHE_NAME = 'metro-tracker-v1';
+const CACHE_NAME = 'metro-tracker-v2';
 const urlsToCache = [
   '/',
   '/login',
@@ -6,7 +6,10 @@ const urlsToCache = [
   '/admin',
   '/manifest.json',
   '/icon-192x192.png',
-  '/icon-512x512.png'
+  '/icon-512x512.png',
+  '/assets/',
+  '/api/stores',
+  '/api/vendors'
 ];
 
 self.addEventListener('install', (event) => {

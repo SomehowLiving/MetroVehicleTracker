@@ -1,6 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { initializeDatabase } from "./init-db";
 
 const app = express();
 app.use(express.json());
@@ -61,6 +62,14 @@ app.use((req, res, next) => {
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
+
+    // Initialize database with seed data
+  try {
+    await initializeDatabase();
+  } catch (error) {
+    console.warn('⚠️  Database initialization failed, continuing anyway:', error.message);
+  }
+
   server.listen({
     port,
     host: "0.0.0.0",

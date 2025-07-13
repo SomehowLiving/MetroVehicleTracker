@@ -27,12 +27,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.post("/api/auth/login", async (req, res) => {
     try {
+      console.log('🔐 Login attempt:', { body: req.body });
+      
       const { username, password, role } = loginSchema.parse(req.body);
+      console.log('✅ Schema validation passed:', { username, role });
 
       const user = await storage.getUserByUsername(username);
-      if (!user || user.password !== password || user.role !== role) {
+      console.log('🔍 User lookup result:', user ? 'Found' : 'Not found');
+      
+      if (!user) {
+        console.log('❌ User not found:', username);
         return res.status(401).json({ message: "Invalid credentials" });
       }
+
+      if (user.password !== password) {
+        console.log('❌ Password mismatch for user:', username);
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      if (user.role !== role) {
+        console.log('❌ Role mismatch for user:', username, 'Expected:', role, 'Actual:', user.role);
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      console.log('✅ Login successful for user:', username);
 
       // In production, use proper JWT tokens
       const token = Buffer.from(
@@ -54,7 +72,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         token,
       });
     } catch (error) {
-      res.status(400).json({ message: "Invalid request data" });
+      console.error('❌ Login error:', error);
+      res.status(400).json({ 
+        message: "Invalid request data",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 
@@ -65,8 +87,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Store routes
   app.get("/api/stores", async (req, res) => {
     try {
+      console.log('📍 Fetching stores...');
       const stores = await storage.getAllStores();
+      console.log(`✅ Found ${stores.length} stores`);
+      
       const storeVehicleCounts = await storage.getStoreVehicleCounts();
+      console.log(`✅ Got vehicle counts for ${storeVehicleCounts.length} stores`);
 
       const storesWithCounts = stores.map((store) => {
         const count = storeVehicleCounts.find((c) => c.storeId === store.id);
@@ -79,7 +105,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(storesWithCounts);
     } catch (error) {
-      res.status(500).json({ message: "Error fetching stores" });
+      console.error('❌ Error fetching stores:', error);
+      res.status(500).json({ 
+        message: "Error fetching stores",
+        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+      });
     }
   });
 
