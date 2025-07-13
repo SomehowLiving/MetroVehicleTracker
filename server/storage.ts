@@ -16,9 +16,14 @@ if (!process.env.DATABASE_URL) {
 }
 
 console.log('🔗 Connecting to database...');
+console.log('🔗 Database URL hostname:', new URL(process.env.DATABASE_URL).hostname);
+
 const client = postgres(process.env.DATABASE_URL, {
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  ssl: { rejectUnauthorized: false }, // Force SSL for Supabase
   onnotice: () => {}, // Suppress notices
+  max: 10,
+  idle_timeout: 20,
+  connect_timeout: 10s
 });
 const db = drizzle(client);
 
@@ -27,6 +32,9 @@ client`SELECT 1`.then(() => {
   console.log('✅ Database connected successfully');
 }).catch((error) => {
   console.error('❌ Database connection failed:', error.message);
+  console.error('❌ Full error:', error);
+  console.log('💡 Check your DATABASE_URL in Secrets/Environment variables');
+  console.log('💡 Ensure your Supabase database is running and accessible');
 });
 
 
