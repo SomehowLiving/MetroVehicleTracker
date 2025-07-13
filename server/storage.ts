@@ -8,18 +8,28 @@ import {
   vehicles,
   checkins,
   manpower,
+  vehicleLoaders,
+  vendorSupervisors,
+  fraudLogs,
   type Store,
   type User,
   type Vendor,
   type Vehicle,
   type Checkin,
   type Manpower,
+  type VehicleLoader,
+  type VendorSupervisor,
+  type FraudLog,
   type InsertStore,
   type InsertUser,
   type InsertVendor,
   type InsertVehicle,
   type InsertCheckin,
   type InsertManpower,
+  type InsertVehicleLoader,
+  type InsertVendorSupervisor,
+  type InsertFraudLog,
+  type FraudCheck,
 } from "@shared/schema";
 
 // Database connection
@@ -96,6 +106,45 @@ export interface IStorage {
   // Manpower
   getManpowerByCheckinId(checkinId: number): Promise<Manpower[]>;
   createManpower(manpower: InsertManpower): Promise<Manpower>;
+
+  // Vehicle Loaders
+  getVehicleLoaders(vehicleId: number): Promise<VehicleLoader[]>;
+  createVehicleLoader(loader: InsertVehicleLoader): Promise<VehicleLoader>;
+  updateVehicleLoader(
+    id: number,
+    updates: Partial<VehicleLoader>,
+  ): Promise<VehicleLoader>;
+  getVehicleLoaderByAadhaar(
+    aadhaarNumber: string,
+  ): Promise<VehicleLoader | null>;
+
+  // Vendor Supervisors
+  getVendorSupervisors(
+    vendorId: number,
+    storeId: number,
+  ): Promise<VendorSupervisor[]>;
+  createVendorSupervisor(
+    supervisor: InsertVendorSupervisor,
+  ): Promise<VendorSupervisor>;
+  getVendorSupervisorByAadhaar(
+    aadhaarNumber: string,
+  ): Promise<VendorSupervisor | null>;
+
+  // Fraud Detection
+  getFraudulentCheckins(storeId?: number, limit?: number): Promise<Checkin[]>;
+  getFraudLogs(checkinId?: number): Promise<FraudLog[]>;
+  createFraudLog(log: InsertFraudLog): Promise<FraudLog>;
+  getRecentFraudAlerts(hours?: number): Promise<FraudLog[]>;
+  createCheckinWithFraudDetection(
+    checkin: InsertCheckin,
+    previousCheckins?: Checkin[],
+  ): Promise<{ checkin: Checkin; fraudChecks: FraudCheck[] }>;
+  resolveFraudAlert(alertId: number, resolvedBy: number): Promise<void>;
+  getFraudStats(storeId?: number): Promise<{
+    totalFraudulent: number;
+    unresolvedAlerts: number;
+    fraudByType: Array<{ type: string; count: number; severity: string }>;
+  }>;
 
   // Dashboard queries
   getTodaysCheckinsCount(storeId?: number): Promise<number>;
@@ -290,6 +339,218 @@ export class PostgresStorage implements IStorage {
     return result[0];
   }
 
+  // Vehicle Loaders methods
+  async getVehicleLoaders(vehicleId: number): Promise<VehicleLoader[]> {
+    return await db
+      .select()
+      .from(vehicleLoaders)
+      .where(
+        and(
+          eq(vehicleLoaders.vehicleId, vehicleId),
+          eq(vehicleLoaders.isActive, true),
+        ),
+      );
+  }
+
+  async createVehicleLoader(
+    loader: InsertVehicleLoader,
+  ): Promise<VehicleLoader> {
+    const result = await db.insert(vehicleLoaders).values(loader).returning();
+    return result[0];
+  }
+
+  async updateVehicleLoader(
+    id: number,
+    updates: Partial<VehicleLoader>,
+  ): Promise<VehicleLoader> {
+    const result = await db
+      .update(vehicleLoaders)
+      .set(updates)
+      .where(eq(vehicleLoaders.id, id))
+      .returning();
+
+    if (!result[0]) {
+      throw new Error(`Vehicle loader with id ${id} not found`);
+    }
+    return result[0];
+  }
+
+  async getVehicleLoaderByAadhaar(
+    aadhaarNumber: string,
+  ): Promise<VehicleLoader | null> {
+    const result = await db
+      .select()
+      .from(vehicleLoaders)
+      .where(eq(vehicleLoaders.aadhaarNumber, aadhaarNumber))
+      .limit(1);
+    return result[0] || null;
+  }
+
+  // Vendor Supervisors methods
+  async getVendorSupervisors(
+    vendorId: number,
+    storeId: number,
+  ): Promise<VendorSupervisor[]> {
+    return await db
+      .select()
+      .from(vendorSupervisors)
+      .where(
+        and(
+          eq(vendorSupervisors.vendorId, vendorId),
+          eq(vendorSupervisors.storeId, storeId),
+          eq(vendorSupervisors.isActive, true),
+        ),
+      );
+  }
+
+  async createVendorSupervisor(
+    supervisor: InsertVendorSupervisor,
+  ): Promise<VendorSupervisor> {
+    const result = await db
+      .insert(vendorSupervisors)
+      .values(supervisor)
+      .returning();
+    return result[0];
+  }
+
+  async getVendorSupervisorByAadhaar(
+    aadhaarNumber: string,
+  ): Promise<VendorSupervisor | null> {
+    const result = await db
+      .select()
+      .from(vendorSupervisors)
+      .where(eq(vendorSupervisors.aadhaarNumber, aadhaarNumber))
+      .limit(1);
+    return result[0] || null;
+  }
+
+  // Fraud Detection methods
+  async getFraudulentCheckins(
+    storeId?: number,
+    limit: number = 50,
+  ): Promise<Checkin[]> {
+    const conditions = [eq(checkins.isFraudulent, true)];
+    if (storeId) {
+      conditions.push(eq(checkins.storeId, storeId));
+    }
+
+    return await db
+      .select()
+      .from(checkins)
+      .where(and(...conditions))
+      .orderBy(desc(checkins.createdAt))
+      .limit(limit);
+  }
+
+  async getFraudLogs(checkinId?: number): Promise<FraudLog[]> {
+    const conditions = [];
+    if (checkinId) {
+      conditions.push(eq(fraudLogs.checkinId, checkinId));
+    }
+
+    return await db
+      .select()
+      .from(fraudLogs)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(fraudLogs.createdAt));
+  }
+
+  async createFraudLog(log: InsertFraudLog): Promise<FraudLog> {
+    const result = await db.insert(fraudLogs).values(log).returning();
+    return result[0];
+  }
+
+  async getRecentFraudAlerts(hours: number = 24): Promise<FraudLog[]> {
+    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+    return await db
+      .select()
+      .from(fraudLogs)
+      .where(
+        and(gte(fraudLogs.createdAt, since), eq(fraudLogs.isResolved, false)),
+      )
+      .orderBy(desc(fraudLogs.createdAt));
+  }
+
+  async resolveFraudAlert(alertId: number, resolvedBy: number): Promise<void> {
+    await db
+      .update(fraudLogs)
+      .set({
+        isResolved: true,
+        resolvedBy,
+        resolvedAt: new Date(),
+      })
+      .where(eq(fraudLogs.id, alertId));
+  }
+
+  // Enhanced checkin method with fraud detection
+  async createCheckinWithFraudDetection(
+    checkin: InsertCheckin,
+    previousCheckins: Checkin[] = [],
+  ): Promise<{ checkin: Checkin; fraudChecks: FraudCheck[] }> {
+    const { FraudDetectionService } = await import(
+      "./services/fraud-detection"
+    );
+
+    // Run fraud detection
+    const fraudChecks = FraudDetectionService.detectFraud({
+      openingKm: checkin.openingKm
+        ? parseFloat(checkin.openingKm.toString())
+        : undefined,
+      closingKm: checkin.closingKm
+        ? parseFloat(checkin.closingKm.toString())
+        : undefined,
+      openingKmTimestamp: checkin.openingKmTimestamp,
+      closingKmTimestamp: checkin.closingKmTimestamp,
+      vehicleNumber: checkin.vehicleNumber,
+      previousCheckins: previousCheckins.map((c) => ({
+        openingKm: c.openingKm ? parseFloat(c.openingKm.toString()) : undefined,
+        closingKm: c.closingKm ? parseFloat(c.closingKm.toString()) : undefined,
+        openingKmTimestamp: c.openingKmTimestamp,
+        closingKmTimestamp: c.closingKmTimestamp,
+      })),
+    });
+
+    // Update checkin with fraud detection results
+    const isFraudulent = FraudDetectionService.isFraudulent(fraudChecks);
+    const fraudFlags = fraudChecks
+      .filter((check) => check.detected)
+      .map((check) => check.type);
+
+    // Create checkin with fraud data
+    const result = await db
+      .insert(checkins)
+      .values({
+        ...checkin,
+        isFraudulent,
+        fraudFlags: fraudFlags.length > 0 ? fraudFlags : null,
+      })
+      .returning();
+
+    const createdCheckin = result[0];
+
+    // Log fraud alerts if any high-severity issues found
+    if (
+      fraudChecks.some((check) => check.detected && check.severity === "high")
+    ) {
+      await Promise.all(
+        fraudChecks
+          .filter((check) => check.detected && check.severity === "high")
+          .map((check) =>
+            db.insert(fraudLogs).values({
+              checkinId: createdCheckin.id,
+              fraudType: check.type,
+              description: check.description,
+              severity: check.severity,
+              isResolved: false,
+            }),
+          ),
+      );
+    }
+
+    return { checkin: createdCheckin, fraudChecks };
+  }
+
   // Dashboard methods
   async getTodaysCheckinsCount(storeId?: number): Promise<number> {
     const today = new Date();
@@ -370,256 +631,6 @@ export class PostgresStorage implements IStorage {
     }));
   }
 
-
-  // Vehicle Loaders
-  async getVehicleLoaders(vehicleId: number): Promise<VehicleLoader[]> {
-    return await db
-      .select()
-      .from(vehicleLoaders)
-      .where(and(eq(vehicleLoaders.vehicleId, vehicleId), eq(vehicleLoaders.isActive, true)));
-  }
-
-  async createVehicleLoader(loader: InsertVehicleLoader): Promise<VehicleLoader> {
-    const result = await db.insert(vehicleLoaders).values(loader).returning();
-    return result[0];
-  }
-
-  async updateVehicleLoader(id: number, updates: Partial<VehicleLoader>): Promise<VehicleLoader> {
-    const result = await db
-      .update(vehicleLoaders)
-      .set(updates)
-      .where(eq(vehicleLoaders.id, id))
-      .returning();
-    return result[0];
-  }
-
-  // Vendor Supervisors
-  async getVendorSupervisors(vendorId: number, storeId: number): Promise<VendorSupervisor[]> {
-    return await db
-      .select()
-      .from(vendorSupervisors)
-      .where(and(
-        eq(vendorSupervisors.vendorId, vendorId),
-        eq(vendorSupervisors.storeId, storeId),
-        eq(vendorSupervisors.isActive, true)
-      ));
-  }
-
-  async createVendorSupervisor(supervisor: InsertVendorSupervisor): Promise<VendorSupervisor> {
-    const result = await db.insert(vendorSupervisors).values(supervisor).returning();
-    return result[0];
-  }
-
-  // Fraud Detection
-  async getFraudulentCheckins(storeId?: number): Promise<Checkin[]> {
-    const conditions = [eq(checkins.isFraudulent, true)];
-    if (storeId) {
-      conditions.push(eq(checkins.storeId, storeId));
-    }
-
-    return await db
-      .select()
-      .from(checkins)
-      .where(and(...conditions))
-      .orderBy(desc(checkins.createdAt))
-      .limit(50);
-  }
-
-  async getFraudLogs(checkinId?: number): Promise<FraudLog[]> {
-    const conditions = [];
-    if (checkinId) {
-      conditions.push(eq(fraudLogs.checkinId, checkinId));
-    }
-
-    return await db
-      .select()
-      .from(fraudLogs)
-      .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(fraudLogs.createdAt));
-  }
-
-  async createFraudLog(log: InsertFraudLog): Promise<FraudLog> {
-    const result = await db.insert(fraudLogs).values(log).returning();
-    return result[0];
-  }
-
-  async getRecentFraudAlerts(hours: number = 24): Promise<FraudLog[]> {
-    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
-
-    return await db
-      .select()
-      .from(fraudLogs)
-      .where(and(
-        gte(fraudLogs.createdAt, since),
-        eq(fraudLogs.isResolved, false)
-      ))
-      .orderBy(desc(fraudLogs.createdAt));
-  }
-
-  // Enhanced checkin method with fraud detection
-  async createCheckinWithFraudDetection(
-    checkin: InsertCheckin,
-    previousCheckins: Checkin[] = []
-  ): Promise<{ checkin: Checkin; fraudChecks: FraudCheck[] }> {
-    const { FraudDetectionService } = await import('./services/fraud-detection');
-
-    // Run fraud detection
-    const fraudChecks = FraudDetectionService.detectFraud({
-      openingKm: checkin.openingKm ? parseFloat(checkin.openingKm.toString()) : undefined,
-      closingKm: checkin.closingKm ? parseFloat(checkin.closingKm.toString()) : undefined,
-      openingKmTimestamp: checkin.openingKmTimestamp,
-      closingKmTimestamp: checkin.closingKmTimestamp,
-      vehicleNumber: checkin.vehicleNumber,
-      previousCheckins: previousCheckins.map(c => ({
-        openingKm: c.openingKm ? parseFloat(c.openingKm.toString()) : undefined,
-        closingKm: c.closingKm ? parseFloat(c.closingKm.toString()) : undefined,
-        openingKmTimestamp: c.openingKmTimestamp,
-        closingKmTimestamp: c.closingKmTimestamp,
-      }))
-    });
-
-    // Update checkin with fraud detection results
-    const isFraudulent = FraudDetectionService.isFraudulent(fraudChecks);
-    const fraudFlags = fraudChecks.filter(check => check.detected).map(check => check.type);
-
-    // Create checkin with fraud data
-    const [createdCheckin] = await db
-      .insert(checkins)
-      .values({
-        ...checkin,
-        isFraudulent,
-        fraudFlags: fraudFlags.length > 0 ? fraudFlags : null
-      })
-      .returning();
-
-    // Log fraud alerts if any high-severity issues found
-    if (fraudChecks.some(check => check.detected && check.severity === 'high')) {
-      await Promise.all(
-        fraudChecks
-          .filter(check => check.detected && check.severity === 'high')
-          .map(check =>
-            db.insert(fraudLogs).values({
-              checkinId: createdCheckin.id,
-              fraudType: check.type,
-              description: check.description,
-              severity: check.severity,
-              isResolved: false
-            })
-          )
-      );
-    }
-
-    return { checkin: createdCheckin, fraudChecks };
-  }
-
-  async getFraudulentCheckins(storeId?: number, limit: number = 50): Promise<Checkin[]> {
-    const conditions = [eq(checkins.isFraudulent, true)];
-    if (storeId) {
-      conditions.push(eq(checkins.storeId, storeId));
-    }
-
-    return await db
-      .select()
-      .from(checkins)
-      .where(and(...conditions))
-      .orderBy(desc(checkins.createdAt))
-      .limit(limit);
-  }
-
-  async resolveFraudAlert(alertId: number, resolvedBy: number): Promise<void> {
-    await db
-      .update(fraudLogs)
-      .set({
-        isResolved: true,
-        resolvedBy,
-        resolvedAt: new Date()
-      })
-      .where(eq(fraudLogs.id, alertId));
-  }
-
-  // Vehicle Loaders methods
-  async getVehicleLoaders(vehicleId: number): Promise<VehicleLoader[]> {
-    return await db
-      .select()
-      .from(vehicleLoaders)
-      .where(and(
-        eq(vehicleLoaders.vehicleId, vehicleId),
-        eq(vehicleLoaders.isActive, true)
-      ));
-  }
-
-  async createVehicleLoader(loader: InsertVehicleLoader): Promise<VehicleLoader> {
-    const [createdLoader] = await db
-      .insert(vehicleLoaders)
-      .values(loader)
-      .returning();
-    return createdLoader;
-  }
-
-  async getVehicleLoaderByAadhaar(aadhaarNumber: string): Promise<VehicleLoader | null> {
-    const result = await db
-      .select()
-      .from(vehicleLoaders)
-      .where(eq(vehicleLoaders.aadhaarNumber, aadhaarNumber))
-      .limit(1);
-    return result[0] || null;
-  }
-
-  // Vendor Supervisors methods
-  async getVendorSupervisors(vendorId: number, storeId: number): Promise<VendorSupervisor[]> {
-    return await db
-      .select()
-      .from(vendorSupervisors)
-      .where(and(
-        eq(vendorSupervisors.vendorId, vendorId),
-        eq(vendorSupervisors.storeId, storeId),
-        eq(vendorSupervisors.isActive, true)
-      ));
-  }
-
-  async createVendorSupervisor(supervisor: InsertVendorSupervisor): Promise<VendorSupervisor> {
-    const [createdSupervisor] = await db
-      .insert(vendorSupervisors)
-      .values(supervisor)
-      .returning();
-    return createdSupervisor;
-  }
-
-  async getVendorSupervisorByAadhaar(aadhaarNumber: string): Promise<VendorSupervisor | null> {
-    const result = await db
-      .select()
-      .from(vendorSupervisors)
-      .where(eq(vendorSupervisors.aadhaarNumber, aadhaarNumber))
-      .limit(1);
-    return result[0] || null;
-  }er(c => c.detected);
-
-    const checkinWithFraud = {
-      ...checkin,
-      isFraudulent,
-      fraudFlags: fraudFlags.length > 0 ? fraudFlags : null,
-    };
-
-    // Create checkin
-    const result = await db.insert(checkins).values(checkinWithFraud).returning();
-    const createdCheckin = result[0];
-
-    // Create fraud logs for detected issues
-    for (const fraudCheck of fraudChecks.filter(c => c.detected)) {
-      await this.createFraudLog({
-        checkinId: createdCheckin.id,
-        fraudType: fraudCheck.type,
-        description: fraudCheck.description,
-        severity: fraudCheck.severity,
-      });
-    }
-
-    return {
-      checkin: createdCheckin,
-      fraudChecks: fraudChecks.filter(c => c.detected)
-    };
-  }
-
   // Dashboard methods for fraud detection
   async getFraudStats(storeId?: number): Promise<{
     totalFraudulent: number;
@@ -642,17 +653,19 @@ export class PostgresStorage implements IStorage {
       .select({ count: count() })
       .from(fraudLogs)
       .leftJoin(checkins, eq(fraudLogs.checkinId, checkins.id))
-      .where(and(
-        eq(fraudLogs.isResolved, false),
-        ...(storeId ? [eq(checkins.storeId, storeId)] : [])
-      ));
+      .where(
+        and(
+          eq(fraudLogs.isResolved, false),
+          ...(storeId ? [eq(checkins.storeId, storeId)] : []),
+        ),
+      );
 
     // Fraud by type
     const fraudByType = await db
       .select({
         type: fraudLogs.fraudType,
         count: count(),
-        severity: fraudLogs.severity
+        severity: fraudLogs.severity,
       })
       .from(fraudLogs)
       .leftJoin(checkins, eq(fraudLogs.checkinId, checkins.id))
@@ -663,11 +676,11 @@ export class PostgresStorage implements IStorage {
     return {
       totalFraudulent: totalFraudulent[0].count,
       unresolvedAlerts: unresolvedAlerts[0].count,
-      fraudByType: fraudByType.map(row => ({
+      fraudByType: fraudByType.map((row) => ({
         type: row.type,
         count: row.count,
-        severity: row.severity
-      }))
+        severity: row.severity,
+      })),
     };
   }
 }

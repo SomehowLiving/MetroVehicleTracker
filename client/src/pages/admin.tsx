@@ -112,49 +112,7 @@ export default function Admin() {
   if (!user) {
     return null;
   }
-
-  const handleFirebaseTest = async () => {
-    try {
-      console.log("🔥 Starting comprehensive Firebase test...");
-
-      // Test 1: Connection test
-      const connectionResult = await testFirebaseConnection();
-      console.log("Connection test result:", connectionResult);
-
-      if (!connectionResult.success) {
-        throw new Error(`Connection failed: ${connectionResult.error}`);
-      }
-
-      // Test 2: Sample data write
-      const docId = await writeSampleData();
-
-      // Test 3: Vehicle entry write
-      await writeVehicleEntry({
-        vehicleNumber: "TEST" + Date.now(),
-        driverName: "Test Driver",
-        status: "In",
-        storeId: 1,
-        storeName: "Metro Mumbai Central",
-      });
-
-      const message = `🎉 Firebase tests completed successfully!
-      
-✅ Connection: ${connectionResult.appName}
-✅ Project ID: ${connectionResult.config.projectId}
-✅ Test Document: ${connectionResult.testDocId}
-✅ Sample Data: ${docId}
-✅ Vehicle Entry: Written`;
-
-      alert(message);
-      console.log("✅ All Firebase tests passed!");
-    } catch (error) {
-      console.error("❌ Firebase test failed:", error);
-      alert(
-        `❌ Firebase test failed: ${error.message}\n\nCheck console for details`,
-      );
-    }
-  };
-
+  
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation */}
@@ -206,13 +164,7 @@ export default function Admin() {
                 >
                   Fraud Detection
                 </Button>
-                <Button
-                  variant="ghost"
-                  onClick={handleFirebaseTest}
-                  className="text-gray-600 hover:text-gray-900"
-                >
-                  Test Firebase
-                </Button>
+                
               </div>
               <div className="flex items-center space-x-2">
                 <div

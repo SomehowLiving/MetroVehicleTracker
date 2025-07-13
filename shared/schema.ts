@@ -61,15 +61,6 @@ export const vendors = pgTable("vendors", {
 //   driverPhotoUrl: text("driver_photo_url"),
 //   createdAt: timestamp("created_at").defaultNow(),
 // });
-export const vehicles = pgTable("vehicles", {
-  id: serial("id").primaryKey(),
-  vehicleNumber: varchar("vehicle_number", { length: 50 }).notNull().unique(),
-  vendorId: integer("vendor_id").references(() => vendors.id),
-  driverName: varchar("driver_name", { length: 255 }).notNull(),
-  driverPhotoUrl: varchar("driver_photo_url", { length: 500 }),
-  createdAt: timestamp("created_at").defaultNow(),
-});
-
 
 // Updated Vehicle table with Aadhaar
 export const vehicles = pgTable("vehicles", {
