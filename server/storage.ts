@@ -461,6 +461,7 @@ export class PostgresStorage implements IStorage {
     checkin: InsertCheckin,
     previousCheckins: Checkin[] = []
   ): Promise<{ checkin: Checkin; fraudChecks: FraudCheck[] }> {
+    const { FraudDetectionService } = await import('./services/fraud-detection');
 
     // Run fraud detection
     const fraudChecks = FraudDetectionService.detectFraud({
@@ -479,7 +480,119 @@ export class PostgresStorage implements IStorage {
 
     // Update checkin with fraud detection results
     const isFraudulent = FraudDetectionService.isFraudulent(fraudChecks);
-    const fraudFlags = fraudChecks.filter(c => c.detected);
+    const fraudFlags = fraudChecks.filter(check => check.detected).map(check => check.type);
+
+    // Create checkin with fraud data
+    const [createdCheckin] = await db
+      .insert(checkins)
+      .values({
+        ...checkin,
+        isFraudulent,
+        fraudFlags: fraudFlags.length > 0 ? fraudFlags : null
+      })
+      .returning();
+
+    // Log fraud alerts if any high-severity issues found
+    if (fraudChecks.some(check => check.detected && check.severity === 'high')) {
+      await Promise.all(
+        fraudChecks
+          .filter(check => check.detected && check.severity === 'high')
+          .map(check =>
+            db.insert(fraudLogs).values({
+              checkinId: createdCheckin.id,
+              fraudType: check.type,
+              description: check.description,
+              severity: check.severity,
+              isResolved: false
+            })
+          )
+      );
+    }
+
+    return { checkin: createdCheckin, fraudChecks };
+  }
+
+  async getFraudulentCheckins(storeId?: number, limit: number = 50): Promise<Checkin[]> {
+    const conditions = [eq(checkins.isFraudulent, true)];
+    if (storeId) {
+      conditions.push(eq(checkins.storeId, storeId));
+    }
+
+    return await db
+      .select()
+      .from(checkins)
+      .where(and(...conditions))
+      .orderBy(desc(checkins.createdAt))
+      .limit(limit);
+  }
+
+  async resolveFraudAlert(alertId: number, resolvedBy: number): Promise<void> {
+    await db
+      .update(fraudLogs)
+      .set({
+        isResolved: true,
+        resolvedBy,
+        resolvedAt: new Date()
+      })
+      .where(eq(fraudLogs.id, alertId));
+  }
+
+  // Vehicle Loaders methods
+  async getVehicleLoaders(vehicleId: number): Promise<VehicleLoader[]> {
+    return await db
+      .select()
+      .from(vehicleLoaders)
+      .where(and(
+        eq(vehicleLoaders.vehicleId, vehicleId),
+        eq(vehicleLoaders.isActive, true)
+      ));
+  }
+
+  async createVehicleLoader(loader: InsertVehicleLoader): Promise<VehicleLoader> {
+    const [createdLoader] = await db
+      .insert(vehicleLoaders)
+      .values(loader)
+      .returning();
+    return createdLoader;
+  }
+
+  async getVehicleLoaderByAadhaar(aadhaarNumber: string): Promise<VehicleLoader | null> {
+    const result = await db
+      .select()
+      .from(vehicleLoaders)
+      .where(eq(vehicleLoaders.aadhaarNumber, aadhaarNumber))
+      .limit(1);
+    return result[0] || null;
+  }
+
+  // Vendor Supervisors methods
+  async getVendorSupervisors(vendorId: number, storeId: number): Promise<VendorSupervisor[]> {
+    return await db
+      .select()
+      .from(vendorSupervisors)
+      .where(and(
+        eq(vendorSupervisors.vendorId, vendorId),
+        eq(vendorSupervisors.storeId, storeId),
+        eq(vendorSupervisors.isActive, true)
+      ));
+  }
+
+  async createVendorSupervisor(supervisor: InsertVendorSupervisor): Promise<VendorSupervisor> {
+    const [createdSupervisor] = await db
+      .insert(vendorSupervisors)
+      .values(supervisor)
+      .returning();
+    return createdSupervisor;
+  }
+
+  async getVendorSupervisorByAadhaar(aadhaarNumber: string): Promise<VendorSupervisor | null> {
+    const result = await db
+      .select()
+      .from(vendorSupervisors)
+      .where(eq(vendorSupervisors.aadhaarNumber, aadhaarNumber))
+      .limit(1);
+    return result[0] || null;
+  }er(c => c.detected);
 
     const checkinWithFraud = {
       ...checkin,

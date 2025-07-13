@@ -10,6 +10,7 @@ import { photoManager } from "../lib/firebase-service";
 import { KPICards } from "@/components/kpi-cards";
 import { VehicleTable } from "@/components/vehicle-table";
 import { ExportPanel } from "@/components/export-panel";
+import { FraudDetectionDashboard } from "@/components/fraud-detection-dashboard";
 import { useEffect, useState } from "react";
 
 export default function Admin() {
@@ -201,6 +202,12 @@ export default function Admin() {
                 </Button>
                 <Button
                   variant="ghost"
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  Fraud Detection
+                </Button>
+                <Button
+                  variant="ghost"
                   onClick={handleFirebaseTest}
                   className="text-gray-600 hover:text-gray-900"
                 >
@@ -237,6 +244,18 @@ export default function Admin() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* KPI Cards */}
         <KPICards refreshKey={refreshKey} />
+
+        {/* Fraud Detection Dashboard */}
+        <div className="mt-8">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">🔍 Fraud Detection Dashboard</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <FraudDetectionDashboard refreshKey={refreshKey} />
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Main Dashboard Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">

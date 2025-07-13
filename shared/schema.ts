@@ -71,11 +71,24 @@ export const vehicles = pgTable("vehicles", {
 });
 
 
+// Updated Vehicle table with Aadhaar
+export const vehicles = pgTable("vehicles", {
+  id: serial("id").primaryKey(),
+  vehicleNumber: varchar("vehicle_number", { length: 50 }).notNull().unique(),
+  vendorId: integer("vendor_id").references(() => vendors.id),
+  driverName: varchar("driver_name", { length: 255 }).notNull(),
+  driverAadhaarNumber: varchar("driver_aadhaar_number", { length: 12 }).unique(),
+  driverPhotoUrl: varchar("driver_photo_url", { length: 500 }),
+  numberOfLoaders: integer("number_of_loaders").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // NEW: Vehicle-specific loaders table
 export const vehicleLoaders = pgTable("vehicle_loaders", {
   id: serial("id").primaryKey(),
   vehicleId: integer("vehicle_id").references(() => vehicles.id).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
+  aadhaarNumber: varchar("aadhaar_number", { length: 12 }).notNull().unique(),
   phoneNumber: varchar("phone_number", { length: 20 }),
   photoUrl: varchar("photo_url", { length: 500 }),
   isActive: boolean("is_active").default(true),
@@ -88,6 +101,7 @@ export const vendorSupervisors = pgTable("vendor_supervisors", {
   vendorId: integer("vendor_id").references(() => vendors.id).notNull(),
   storeId: integer("store_id").references(() => stores.id).notNull(),
   name: varchar("name", { length: 255 }).notNull(),
+  aadhaarNumber: varchar("aadhaar_number", { length: 12 }).notNull().unique(),
   phoneNumber: varchar("phone_number", { length: 20 }),
   photoUrl: varchar("photo_url", { length: 500 }),
   isActive: boolean("is_active").default(true),
@@ -193,11 +207,14 @@ export const vehicleEntrySchema = z.object({
   vendorId: z.number(),
   vehicleNumber: z.string().min(1, "Vehicle number is required"),
   driverName: z.string().min(1, "Driver name is required"),
+  driverAadhaarNumber: z.string().length(12, "Aadhaar number must be 12 digits").optional(),
   driverPhotoUrl: z.string().optional(),
+  numberOfLoaders: z.number().min(0).optional(),
   openingKm: z.number().optional(),
-  manpower: z.array(z.object({
+  loaders: z.array(z.object({
     name: z.string().min(1, "Name is required"),
-    role: z.string().min(1, "Role is required"),
+    aadhaarNumber: z.string().length(12, "Aadhaar number must be 12 digits"),
+    phoneNumber: z.string().optional(),
     photoUrl: z.string().optional(),
   })).optional(),
 });

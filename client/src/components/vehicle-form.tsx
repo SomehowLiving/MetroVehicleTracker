@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Camera, Save, LogIn, LogOut } from "lucide-react";
+import { Camera, Save, LogIn, LogOut, Plus } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import CameraModal from "./camera-modal";
@@ -36,19 +36,72 @@ interface VehicleFormProps {
   operatorId: number;
 }
 
+interface ManpowerMember {
+  name: string;
+  aadhaarNumber?: string;
+  phoneNumber?: string;
+  photoUrl?: string;
+}
+
 export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [mode, setMode] = useState<"checkin" | "checkout">("checkin");
-  const [cameraModal, setCameraModal] = useState<{
-    isOpen: boolean;
-    type: "driver" | "loader" | "supervisor";
-  }>({ isOpen: false, type: "driver" });
-  const [photos, setPhotos] = useState<{
-    driver?: string;
-    loader?: string;
-    supervisor?: string;
-  }>({});
+
+  const [vehicleNumber, setVehicleNumber] = useState("");
+  const [driverName, setDriverName] = useState("");
+  const [driverAadhaar, setDriverAadhaar] = useState("");
+  const [numberOfLoaders, setNumberOfLoaders] = useState(0);
+  const [loaders, setLoaders] = useState<Array<{
+    name: string;
+    aadhaarNumber: string;
+    phoneNumber?: string;
+    photoUrl?: string;
+  }>>([]);
+  const [vendorId, setVendorId] = useState<number | undefined>();
+  const [openingKm, setOpeningKm] = useState<number | undefined>();
+  const [driverPhotoUrl, setDriverPhotoUrl] = useState<string>("");
+
+  const [manpower, setManpower] = useState<ManpowerMember[]>([]);
+  const [showCamera, setShowCamera] = useState(false);
+  const [cameraMode, setCameraMode] = useState<"driver" | "manpower" | "loader">("driver");
+  const [manpowerIndex, setManpowerIndex] = useState(0);
+  const [loaderIndex, setLoaderIndex] = useState(0);
+
+  const addManpowerMember = () => {
+    setManpower((prev) => [...prev, { name: "" }]);
+  };
+
+  const updateManpowerMember = (index: number, field: string, value: string) => {
+    setManpower((prev) =>
+      prev.map((member, i) => (i === index ? { ...member, [field]: value } : member)),
+    );
+  };
+
+  const removeManpowerMember = (index: number) => {
+    setManpower((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const captureDriverPhoto = () => {
+    setShowCamera(true);
+    setCameraMode("driver");
+  };
+
+  const updateLoader = (index: number, field: string, value: string) => {
+    setLoaders(prev => {
+      const updated = [...prev];
+      if (!updated[index]) {
+        updated[index] = { name: '', aadhaarNumber: '', phoneNumber: '', photoUrl: '' };
+      }
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const captureLoaderPhoto = (index: number) => {
+    setLoaderIndex(index);
+    setShowCamera(true);
+    setCameraMode("loader");
+  };
 
   const form = useForm({
     resolver: zodResolver(vehicleFormSchema),
@@ -152,6 +205,17 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
 
   const handleSubmit = form.handleSubmit((data) => {
     if (mode === "checkin") {
+       const entryData = {
+        vendorId: vendorId!,
+        vehicleNumber,
+        driverName,
+        driverAadhaarNumber: driverAadhaar || undefined,
+        driverPhotoUrl,
+        numberOfLoaders,
+        openingKm,
+        loaders: loaders.filter(l => l.name.trim() !== '' && l.aadhaarNumber.trim() !== ''),
+        manpower: manpower.filter(m => m.name.trim() !== ''),
+      };
       vehicleEntryMutation.mutate({
         ...data,
         vendorId: parseInt(data.vendorId),
@@ -172,7 +236,18 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
   });
 
   const handleCameraCapture = (photoDataUrl: string) => {
-    setPhotos((prev) => ({ ...prev, [cameraModal.type]: photoDataUrl }));
+     if (cameraMode === "driver") {
+            setDriverPhotoUrl(photoDataUrl);
+          } else if (cameraMode === "loader") {
+            updateLoader(loaderIndex, 'photoUrl', photoDataUrl);
+          } else {
+            setManpower((prev) =>
+              prev.map((member, i) =>
+                i === manpowerIndex ? { ...member, photoUrl: photoDataUrl } : member,
+              ),
+            );
+          }
+          setShowCamera(false);
   };
 
   const openCamera = (type: "driver" | "loader" | "supervisor") => {
@@ -210,224 +285,206 @@ export default function VehicleForm({ storeId, operatorId }: VehicleFormProps) {
           </div>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Vendor Selection */}
+         <div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="vendorId">Vendor Name</Label>
-                {/* <Select {...form.register("vendorId")}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select Vendor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {vendors?.map((vendor: any) => (
-                      <SelectItem key={vendor.id} value={vendor.id.toString()}>
-                        {vendor.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select> */}
-                <Controller
-                  name="vendorId"
-                  control={form.control}
-                  render={({ field }) => (
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Vendor" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {vendors?.map((vendor: any) => (
-                          <SelectItem
-                            key={vendor.id}
-                            value={vendor.id.toString()}
-                          >
-                            {vendor.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  )}
+                <Label htmlFor="vehicleNumber">Vehicle Number *</Label>
+                <Input
+                  id="vehicleNumber"
+                  placeholder="MH01AB1234"
+                  value={vehicleNumber}
+                  onChange={(e) => setVehicleNumber(e.target.value.toUpperCase())}
+                  className="uppercase"
                 />
-
-                {form.formState.errors.vendorId && (
-                  <p className="text-sm text-red-600">
-                    {form.formState.errors.vendorId.message}
-                  </p>
-                )}
               </div>
-
-              {/* Vehicle Number */}
               <div className="space-y-2">
-                <Label htmlFor="vehicleNumber">Vehicle Number</Label>
-                {mode === "checkout" ? (
-                  <Select
-                    value={form.watch("vehicleNumber")}
-                    onValueChange={handleVehicleSelect}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Vehicle" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {activeVehicles?.map((vehicle: any) => (
-                        <SelectItem
-                          key={vehicle.id}
-                          value={vehicle.vehicleNumber}
-                        >
-                          {vehicle.vehicleNumber} - {vehicle.driverName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                ) : (
-                  <Input
-                    id="vehicleNumber"
-                    placeholder="MH-01-AB-1234"
-                    {...form.register("vehicleNumber")}
-                  />
-                )}
-                {form.formState.errors.vehicleNumber && (
-                  <p className="text-sm text-red-600">
-                    {form.formState.errors.vehicleNumber.message}
-                  </p>
-                )}
-              </div>
-
-              {/* Driver Name */}
-              <div className="space-y-2">
-                <Label htmlFor="driverName">Driver Name</Label>
+                <Label htmlFor="driverName">Driver Name *</Label>
                 <Input
                   id="driverName"
-                  placeholder="Driver Name"
-                  readOnly={mode === "checkout"}
-                  className={mode === "checkout" ? "bg-gray-100" : ""}
-                  {...form.register("driverName")}
+                  placeholder="Driver's full name"
+                  value={driverName}
+                  onChange={(e) => setDriverName(e.target.value)}
                 />
-                {form.formState.errors.driverName && (
-                  <p className="text-sm text-red-600">
-                    {form.formState.errors.driverName.message}
-                  </p>
-                )}
               </div>
+            </div>
 
-              {/* Opening/Closing KM */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="openingKm">
-                  {mode === "checkin" ? "Opening KM" : "Closing KM"}
-                </Label>
+                <Label htmlFor="driverAadhaar">Driver Aadhaar Number</Label>
                 <Input
-                  id="openingKm"
+                  id="driverAadhaar"
+                  placeholder="123456789012"
+                  maxLength={12}
+                  value={driverAadhaar}
+                  onChange={(e) => setDriverAadhaar(e.target.value.replace(/\D/g, ''))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="numberOfLoaders">Number of Loaders</Label>
+                <Input
+                  id="numberOfLoaders"
                   type="number"
-                  placeholder="12345"
-                  {...form.register("openingKm")}
+                  min="0"
+                  max="10"
+                  value={numberOfLoaders}
+                  onChange={(e) => setNumberOfLoaders(parseInt(e.target.value) || 0)}
                 />
               </div>
             </div>
-
-            {/* Driver Photo */}
-            <div className="space-y-2">
-              <Label>Driver Photo</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                {photos.driver ? (
-                  <div className="space-y-2">
-                    <img
-                      src={photos.driver}
-                      alt="Driver"
-                      className="w-32 h-32 object-cover rounded-lg mx-auto"
-                    />
-                    <Badge variant="secondary">Photo captured</Badge>
+            {/* Loader Details Section */}
+            {numberOfLoaders > 0 && (
+              <div className="space-y-4">
+                <Label className="text-base font-medium">Loader Details</Label>
+                {Array.from({ length: numberOfLoaders }, (_, index) => (
+                  <div key={index} className="p-4 border rounded-lg space-y-3">
+                    <h4 className="font-medium">Loader {index + 1}</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="space-y-2">
+                        <Label>Name *</Label>
+                        <Input
+                          placeholder="Loader's full name"
+                          value={loaders[index]?.name || ''}
+                          onChange={(e) => updateLoader(index, 'name', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Aadhaar Number *</Label>
+                        <Input
+                          placeholder="123456789012"
+                          maxLength={12}
+                          value={loaders[index]?.aadhaarNumber || ''}
+                          onChange={(e) => updateLoader(index, 'aadhaarNumber', e.target.value.replace(/\D/g, ''))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Phone Number</Label>
+                        <Input
+                          placeholder="Phone number"
+                          value={loaders[index]?.phoneNumber || ''}
+                          onChange={(e) => updateLoader(index, 'phoneNumber', e.target.value)}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Photo</Label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => captureLoaderPhoto(index)}
+                          className="w-full"
+                        >
+                          <Camera className="h-4 w-4 mr-2" />
+                          Capture Photo
+                        </Button>
+                        {loaders[index]?.photoUrl && (
+                          <div className="text-sm text-green-600">✓ Photo captured</div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                ) : (
-                  <div className="space-y-2">
-                    <Camera className="h-12 w-12 text-gray-400 mx-auto" />
-                    <p className="text-sm text-gray-600">
-                      Click to capture driver photo
-                    </p>
-                  </div>
-                )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => openCamera("driver")}
-                  className="mt-2"
-                >
-                  <Camera className="mr-2 h-4 w-4" />
-                  {photos.driver ? "Retake Photo" : "Capture Photo"}
-                </Button>
-              </div>
-            </div>
-
-            {/* Manpower Details */}
-            {mode === "checkin" && (
-              <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Manpower Details
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="loaderName">Loader Name</Label>
-                    <Input
-                      id="loaderName"
-                      placeholder="Loader Name"
-                      {...form.register("loaderName")}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openCamera("loader")}
-                      className="text-metro-blue hover:text-metro-deep-blue"
-                    >
-                      <Camera className="mr-1 h-4 w-4" />
-                      {photos.loader ? "Retake Photo" : "Capture Photo"}
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="supervisorName">Supervisor Name</Label>
-                    <Input
-                      id="supervisorName"
-                      placeholder="Supervisor Name"
-                      {...form.register("supervisorName")}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openCamera("supervisor")}
-                      className="text-metro-blue hover:text-metro-deep-blue"
-                    >
-                      <Camera className="mr-1 h-4 w-4" />
-                      {photos.supervisor ? "Retake Photo" : "Capture Photo"}
-                    </Button>
-                  </div>
-                </div>
+                ))}
               </div>
             )}
 
-            {/* Submit Button */}
-            <div className="flex justify-end">
-              <Button
-                type="submit"
-                className="bg-metro-blue hover:bg-metro-deep-blue"
-                disabled={
-                  vehicleEntryMutation.isPending ||
-                  vehicleExitMutation.isPending
-                }
-              >
-                <Save className="mr-2 h-4 w-4" />
-                {vehicleEntryMutation.isPending || vehicleExitMutation.isPending
-                  ? "Saving..."
-                  : `Save ${mode === "checkin" ? "Entry" : "Exit"}`}
-              </Button>
+            {/* Manpower Section */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-base font-medium">Additional Manpower</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addManpowerMember}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Add Person
+                </Button>
+              </div>
+              {manpower.map((member, index) => (
+                <div key={index} className="p-4 border rounded-lg space-y-3">
+                  <h4 className="font-medium">Person {index + 1}</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Name *</Label>
+                      <Input
+                        placeholder="Full name"
+                        value={member.name}
+                        onChange={(e) => updateManpowerMember(index, 'name', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Aadhaar Number</Label>
+                      <Input
+                        placeholder="123456789012"
+                        maxLength={12}
+                        value={member.aadhaarNumber || ''}
+                        onChange={(e) => updateManpowerMember(index, 'aadhaarNumber', e.target.value.replace(/\D/g, ''))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Phone Number</Label>
+                      <Input
+                        placeholder="Phone number"
+                        value={member.phoneNumber || ''}
+                        onChange={(e) => updateManpowerMember(index, 'phoneNumber', e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Photo</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setManpowerIndex(index);
+                          setShowCamera(true);
+                          setCameraMode("manpower");
+                        }}
+                        className="w-full"
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Capture Photo
+                      </Button>
+                      {member.photoUrl && (
+                        <div className="text-sm text-green-600">✓ Photo captured</div>
+                      )}
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => removeManpowerMember(index)}
+                  >
+                    Remove Person
+                  </Button>
+                </div>
+              ))}
             </div>
-          </form>
+            <Button onClick={handleSubmit}>Save</Button>
+          </div>
         </CardContent>
       </Card>
 
       <CameraModal
-        isOpen={cameraModal.isOpen}
-        onClose={() => setCameraModal({ isOpen: false, type: "driver" })}
-        onCapture={handleCameraCapture}
-        title={`Capture ${cameraModal.type} Photo`}
+        isOpen={showCamera}
+        onClose={() => setShowCamera(false)}
+        onCapture={(photoUrl) => {
+          if (cameraMode === "driver") {
+            setDriverPhotoUrl(photoUrl);
+          } else if (cameraMode === "loader") {
+            updateLoader(loaderIndex, 'photoUrl', photoUrl);
+          } else {
+            setManpower((prev) =>
+              prev.map((member, i) =>
+                i === manpowerIndex ? { ...member, photoUrl } : member,
+              ),
+            );
+          }
+          setShowCamera(false);
+        }}
+        title={`Capture ${cameraMode} Photo`}
       />
     </>
   );

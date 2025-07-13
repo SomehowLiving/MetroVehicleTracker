@@ -470,6 +470,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Fraud Detection Routes
+  app.get("/api/fraud/stats", async (req, res) => {
+    try {
+      const { storeId } = req.query;
+      const storeIdNum = storeId ? parseInt(storeId as string) : undefined;
+      
+      const fraudStats = await storage.getFraudStats(storeIdNum);
+      res.json(fraudStats);
+    } catch (error) {
+      console.error("Error fetching fraud stats:", error);
+      res.status(500).json({ message: "Error fetching fraud statistics" });
+    }
+  });
+
+  app.get("/api/fraud/alerts", async (req, res) => {
+    try {
+      const { hours = 24 } = req.query;
+      const alerts = await storage.getRecentFraudAlerts(parseInt(hours as string));
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching fraud alerts:", error);
+      res.status(500).json({ message: "Error fetching fraud alerts" });
+    }
+  });
+
+  app.get("/api/fraud/checkins", async (req, res) => {
+    try {
+      const { storeId, limit = 50 } = req.query;
+      const storeIdNum = storeId ? parseInt(storeId as string) : undefined;
+      
+      const fraudulentCheckins = await storage.getFraudulentCheckins(storeIdNum, parseInt(limit as string));
+      res.json(fraudulentCheckins);
+    } catch (error) {
+      console.error("Error fetching fraudulent checkins:", error);
+      res.status(500).json({ message: "Error fetching fraudulent checkins" });
+    }
+  });
+
+  app.post("/api/fraud/alerts/:id/resolve", async (req, res) => {
+    try {
+      const alertId = parseInt(req.params.id);
+      const { resolvedBy = 1 } = req.body; // Default admin user
+      
+      await storage.resolveFraudAlert(alertId, resolvedBy);
+      res.json({ message: "Alert resolved successfully" });
+    } catch (error) {
+      console.error("Error resolving fraud alert:", error);
+      res.status(500).json({ message: "Error resolving fraud alert" });
+    }
+  });
+
+  // Vehicle Loaders Routes
+  app.get("/api/vehicles/:vehicleId/loaders", async (req, res) => {
+    try {
+      const vehicleId = parseInt(req.params.vehicleId);
+      const loaders = await storage.getVehicleLoaders(vehicleId);
+      res.json(loaders);
+    } catch (error) {
+      console.error("Error fetching vehicle loaders:", error);
+      res.status(500).json({ message: "Error fetching vehicle loaders" });
+    }
+  });
+
+  app.post("/api/vehicles/:vehicleId/loaders", async (req, res) => {
+    try {
+      const vehicleId = parseInt(req.params.vehicleId);
+      const loaderData = req.body;
+      
+      const loader = await storage.createVehicleLoader({
+        vehicleId,
+        ...loaderData
+      });
+      res.json(loader);
+    } catch (error) {
+      console.error("Error creating vehicle loader:", error);
+      res.status(500).json({ message: "Error creating vehicle loader" });
+    }
+  });
+
+  // Vendor Supervisors Routes
+  app.get("/api/vendors/:vendorId/stores/:storeId/supervisors", async (req, res) => {
+    try {
+      const vendorId = parseInt(req.params.vendorId);
+      const storeId = parseInt(req.params.storeId);
+      
+      const supervisors = await storage.getVendorSupervisors(vendorId, storeId);
+      res.json(supervisors);
+    } catch (error) {
+      console.error("Error fetching vendor supervisors:", error);
+      res.status(500).json({ message: "Error fetching vendor supervisors" });
+    }
+  });
+
+  app.post("/api/vendors/:vendorId/stores/:storeId/supervisors", async (req, res) => {
+    try {
+      const vendorId = parseInt(req.params.vendorId);
+      const storeId = parseInt(req.params.storeId);
+      const supervisorData = req.body;
+      
+      const supervisor = await storage.createVendorSupervisor({
+        vendorId,
+        storeId,
+        ...supervisorData
+      });
+      res.json(supervisor);
+    } catch (error) {
+      console.error("Error creating vendor supervisor:", error);
+      res.status(500).json({ message: "Error creating vendor supervisor" });
+    }
+  });
+
   return httpServer;
 }
 
