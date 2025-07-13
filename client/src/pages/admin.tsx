@@ -6,7 +6,7 @@ import { BarChart3, LogOut, User, RefreshCw } from "lucide-react";
 import { useRequireAuth } from "@/hooks/use-auth";
 import { useAuth } from "@/lib/auth";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { writeSampleData, writeVehicleEntry, testFirebaseConnection } from "@/lib/firebase";
+import { photoManager } from "../lib/firebase-service";
 import { KPICards } from "@/components/kpi-cards";
 import { VehicleTable } from "@/components/vehicle-table";
 import { ExportPanel } from "@/components/export-panel";
@@ -17,8 +17,14 @@ export default function Admin() {
   const { logout } = useAuth();
   const { isConnected, lastMessage } = useWebSocket();
   const [refreshKey, setRefreshKey] = useState(0);
+  const { isLoading } = useAuth();
+  console.log("🔍 Auth Debug:", { user, isLoading }); // Debug log
 
-  const { data: storeVehicleCounts, isLoading: storeCountsLoading, error: storeCountsError } = useQuery({
+  const {
+    data: storeVehicleCounts,
+    isLoading: storeCountsLoading,
+    error: storeCountsError,
+  } = useQuery({
     queryKey: ["/api/dashboard/store-counts", refreshKey],
     queryFn: async () => {
       console.log("🔄 Fetching store counts...");
@@ -33,7 +39,11 @@ export default function Admin() {
     enabled: !!user,
   });
 
-  const { data: recentActivity, isLoading: activityLoading, error: activityError } = useQuery({
+  const {
+    data: recentActivity,
+    isLoading: activityLoading,
+    error: activityError,
+  } = useQuery({
     queryKey: ["/api/dashboard/recent-activity", refreshKey],
     queryFn: async () => {
       console.log("🔄 Fetching recent activity...");
@@ -48,11 +58,52 @@ export default function Admin() {
     enabled: !!user,
   });
 
+  // Add loading state check
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto mb-4"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check if user exists and has admin role
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p>No user found. Please log in.</p>
+          <button onClick={() => (window.location.href = "/")}>
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (user.role !== "admin") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <p>Access denied. Admin role required.</p>
+          <p>Your role: {user.role}</p>
+        </div>
+      </div>
+    );
+  }
+
   // Handle real-time updates
   useEffect(() => {
     if (lastMessage) {
-      if (lastMessage.type === 'vehicle_entry' || lastMessage.type === 'vehicle_exit' || lastMessage.type === 'status_update') {
-        setRefreshKey(prev => prev + 1);
+      if (
+        lastMessage.type === "vehicle_entry" ||
+        lastMessage.type === "vehicle_exit" ||
+        lastMessage.type === "status_update"
+      ) {
+        setRefreshKey((prev) => prev + 1);
       }
     }
   }, [lastMessage]);
@@ -64,27 +115,27 @@ export default function Admin() {
   const handleFirebaseTest = async () => {
     try {
       console.log("🔥 Starting comprehensive Firebase test...");
-      
+
       // Test 1: Connection test
       const connectionResult = await testFirebaseConnection();
       console.log("Connection test result:", connectionResult);
-      
+
       if (!connectionResult.success) {
         throw new Error(`Connection failed: ${connectionResult.error}`);
       }
-      
+
       // Test 2: Sample data write
       const docId = await writeSampleData();
-      
+
       // Test 3: Vehicle entry write
       await writeVehicleEntry({
         vehicleNumber: "TEST" + Date.now(),
         driverName: "Test Driver",
         status: "In",
         storeId: 1,
-        storeName: "Metro Mumbai Central"
+        storeName: "Metro Mumbai Central",
       });
-      
+
       const message = `🎉 Firebase tests completed successfully!
       
 ✅ Connection: ${connectionResult.appName}
@@ -92,13 +143,14 @@ export default function Admin() {
 ✅ Test Document: ${connectionResult.testDocId}
 ✅ Sample Data: ${docId}
 ✅ Vehicle Entry: Written`;
-      
+
       alert(message);
       console.log("✅ All Firebase tests passed!");
-      
     } catch (error) {
       console.error("❌ Firebase test failed:", error);
-      alert(`❌ Firebase test failed: ${error.message}\n\nCheck console for details`);
+      alert(
+        `❌ Firebase test failed: ${error.message}\n\nCheck console for details`,
+      );
     }
   };
 
@@ -113,21 +165,55 @@ export default function Admin() {
                 <BarChart3 className="text-white h-5 w-5" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">Admin Dashboard</h1>
-                <p className="text-sm text-gray-600">Real-time System Overview</p>
+                <h1 className="text-lg font-bold text-gray-900">
+                  Admin Dashboard
+                </h1>
+                <p className="text-sm text-gray-600">
+                  Real-time System Overview
+                </p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="hidden md:flex items-center space-x-6">
-                <Button variant="ghost" className="text-gray-600 hover:text-gray-900">Live Views</Button>
-                <Button variant="ghost" className="text-gray-600 hover:text-gray-900">History</Button>
-                <Button variant="ghost" className="text-gray-600 hover:text-gray-900">Analytics</Button>
-                <Button variant="ghost" className="text-gray-600 hover:text-gray-900">Export</Button>
-                <Button variant="ghost" onClick={handleFirebaseTest} className="text-gray-600 hover:text-gray-900">Test Firebase</Button>
+                <Button
+                  variant="ghost"
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  Live Views
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  History
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  Analytics
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  Export
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={handleFirebaseTest}
+                  className="text-gray-600 hover:text-gray-900"
+                >
+                  Test Firebase
+                </Button>
               </div>
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success' : 'bg-error'}`} />
-                <span className="text-sm text-gray-600">{isConnected ? 'Live' : 'Offline'}</span>
+                <div
+                  className={`w-2 h-2 rounded-full ${isConnected ? "bg-success" : "bg-error"}`}
+                />
+                <span className="text-sm text-gray-600">
+                  {isConnected ? "Live" : "Offline"}
+                </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
@@ -135,7 +221,11 @@ export default function Admin() {
                 </div>
                 <span className="text-sm text-gray-700">{user.name}</span>
               </div>
-              <Button variant="ghost" onClick={logout} className="text-gray-500 hover:text-gray-700">
+              <Button
+                variant="ghost"
+                onClick={logout}
+                className="text-gray-500 hover:text-gray-700"
+              >
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
@@ -158,10 +248,18 @@ export default function Admin() {
                   <CardTitle className="text-xl">Live Vehicle Status</CardTitle>
                   <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-2">
-                      <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success' : 'bg-error'}`} />
-                      <span className="text-sm text-gray-600">Live updates</span>
+                      <div
+                        className={`w-2 h-2 rounded-full ${isConnected ? "bg-success" : "bg-error"}`}
+                      />
+                      <span className="text-sm text-gray-600">
+                        Live updates
+                      </span>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => setRefreshKey(prev => prev + 1)}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setRefreshKey((prev) => prev + 1)}
+                    >
                       <RefreshCw className="h-4 w-4" />
                     </Button>
                   </div>
@@ -193,24 +291,39 @@ export default function Admin() {
                   <div className="space-y-4">
                     {storeVehicleCounts && storeVehicleCounts.length > 0 ? (
                       storeVehicleCounts.slice(0, 10).map((store: any) => (
-                        <div key={store.storeId} className="flex items-center justify-between">
+                        <div
+                          key={store.storeId}
+                          className="flex items-center justify-between"
+                        >
                           <div className="flex items-center space-x-3">
-                            <div className={`w-2 h-2 rounded-full ${store.vehicleCount > 0 ? 'bg-success' : 'bg-gray-300'}`} />
-                            <span className="text-sm text-gray-700">{store.storeName}</span>
+                            <div
+                              className={`w-2 h-2 rounded-full ${store.vehicleCount > 0 ? "bg-success" : "bg-gray-300"}`}
+                            />
+                            <span className="text-sm text-gray-700">
+                              {store.storeName}
+                            </span>
                           </div>
                           <div className="flex items-center space-x-2">
-                            <span className={`text-sm font-semibold ${store.vehicleCount > 0 ? 'text-success' : 'text-gray-400'}`}>
+                            <span
+                              className={`text-sm font-semibold ${store.vehicleCount > 0 ? "text-success" : "text-gray-400"}`}
+                            >
                               {store.vehicleCount || 0}
                             </span>
-                            <span className="text-xs text-gray-500">vehicles</span>
+                            <span className="text-xs text-gray-500">
+                              vehicles
+                            </span>
                           </div>
                         </div>
                       ))
                     ) : (
                       <div className="text-center py-8">
                         <div className="text-gray-400 mb-2">📊</div>
-                        <div className="text-sm text-gray-500">No store data available</div>
-                        <div className="text-xs text-gray-400 mt-1">Data will appear here when vehicles check in</div>
+                        <div className="text-sm text-gray-500">
+                          No store data available
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          Data will appear here when vehicles check in
+                        </div>
                       </div>
                     )}
                   </div>
@@ -237,13 +350,24 @@ export default function Admin() {
                   <div className="space-y-3">
                     {recentActivity && recentActivity.length > 0 ? (
                       recentActivity.slice(0, 5).map((activity: any) => (
-                        <div key={activity.id} className="flex items-start space-x-3">
-                          <div className={`w-2 h-2 rounded-full mt-2 ${activity.status === 'In' ? 'bg-success' : 'bg-error'}`} />
+                        <div
+                          key={activity.id}
+                          className="flex items-start space-x-3"
+                        >
+                          <div
+                            className={`w-2 h-2 rounded-full mt-2 ${activity.status === "In" ? "bg-success" : "bg-error"}`}
+                          />
                           <div className="flex-1">
                             <div className="text-sm text-gray-900">
-                              Vehicle {activity.vehicleNumber} {activity.status === 'In' ? 'checked in' : 'checked out'} at {activity.storeName}
+                              Vehicle {activity.vehicleNumber}{" "}
+                              {activity.status === "In"
+                                ? "checked in"
+                                : "checked out"}{" "}
+                              at {activity.storeName}
                             </div>
-                            <div className="text-xs text-gray-500">{new Date(activity.createdAt).toLocaleString()}</div>
+                            <div className="text-xs text-gray-500">
+                              {new Date(activity.createdAt).toLocaleString()}
+                            </div>
                           </div>
                         </div>
                       ))

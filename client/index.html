@@ -1,50 +1,70 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1"
+    />
     <title>Metro Vehicle Attendance & Tracking System</title>
-    <meta name="description" content="Digital gate log management system for Metro Cash & Carry stores. Track vehicle movements, manage driver data, and maintain real-time attendance records." />
-    
+    <meta
+      name="description"
+      content="Digital gate log management system for Metro Cash & Carry stores. Track vehicle movements, manage driver data, and maintain real-time attendance records."
+    />
+
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#003399" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Metro Vehicle Tracking" />
-    
+
     <!-- PWA Icons -->
     <link rel="apple-touch-icon" href="/icon-192x192.png" />
     <link rel="manifest" href="/manifest.json" />
-    
+
     <!-- Open Graph Meta Tags -->
-    <meta property="og:title" content="Metro Vehicle Attendance & Tracking System" />
-    <meta property="og:description" content="Digital gate log management system for Metro Cash & Carry stores. Track vehicle movements, manage driver data, and maintain real-time attendance records." />
+    <meta
+      property="og:title"
+      content="Metro Vehicle Attendance & Tracking System"
+    />
+    <meta
+      property="og:description"
+      content="Digital gate log management system for Metro Cash & Carry stores. Track vehicle movements, manage driver data, and maintain real-time attendance records."
+    />
     <meta property="og:type" content="website" />
     <meta property="og:image" content="/icon-512x512.png" />
-    
+
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Metro Vehicle Attendance & Tracking System" />
-    <meta name="twitter:description" content="Digital gate log management system for Metro Cash & Carry stores." />
+    <meta
+      name="twitter:title"
+      content="Metro Vehicle Attendance & Tracking System"
+    />
+    <meta
+      name="twitter:description"
+      content="Digital gate log management system for Metro Cash & Carry stores."
+    />
     <meta name="twitter:image" content="/icon-512x512.png" />
-    
+
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    
+
     <!-- Preconnect for Performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    
+
     <!-- Service Worker Registration -->
     <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", () => {
+          navigator.serviceWorker
+            .register("/sw.js")
             .then((registration) => {
-              console.log('SW registered: ', registration);
+              console.log("SW registered: ", registration);
             })
             .catch((registrationError) => {
-              console.log('SW registration failed: ', registrationError);
+              console.log("SW registration failed: ", registrationError);
             });
         });
       }
@@ -54,6 +74,9 @@
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
-    <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
+    <script
+      type="text/javascript"
+      src="https://replit.com/public/js/replit-dev-banner.js"
+    ></script>
   </body>
 </html>
