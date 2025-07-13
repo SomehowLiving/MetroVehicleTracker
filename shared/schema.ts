@@ -1,40 +1,99 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, varchar, decimal } from "drizzle-orm/pg-core";
+import { createInsertSchema , createSelectSchema } from "drizzle-zod";
+
 import { z } from "zod";
 
+// export const stores = pgTable("stores", {
+//   id: serial("id").primaryKey(),
+//   name: text("name").notNull(),
+//   location: text("location").notNull(),
+//   isActive: boolean("is_active").default(true),
+//   createdAt: timestamp("created_at").defaultNow(),
+// });
 export const stores = pgTable("stores", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  location: text("location").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  location: varchar("location", { length: 255 }),
   isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
+// export const users = pgTable("users", {
+//   id: serial("id").primaryKey(),
+//   username: text("username").notNull().unique(),
+//   password: text("password").notNull(),
+//   name: text("name").notNull(),
+//   email: text("email"),
+//   role: text("role").notNull(), // 'admin' | 'gate_operator'
+//   storeId: integer("store_id").references(() => stores.id),
+//   createdAt: timestamp("created_at").defaultNow(),
+// });
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  name: text("name").notNull(),
-  email: text("email"),
-  role: text("role").notNull(), // 'admin' | 'gate_operator'
+  username: varchar("username", { length: 50 }).notNull().unique(),
+  password: varchar("password", { length: 255 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
+  role: varchar("role", { length: 20 }).notNull(), // 'admin' | 'gate_operator'
   storeId: integer("store_id").references(() => stores.id),
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// export const vendors = pgTable("vendors", {
+//   id: serial("id").primaryKey(),
+//   name: text("name").notNull(),
+//   email: text("email").notNull(),
+//   isActive: boolean("is_active").default(true),
+// });
 export const vendors = pgTable("vendors", {
   id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  email: text("email").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  email: varchar("email", { length: 255 }),
   isActive: boolean("is_active").default(true),
-});
-
-export const vehicles = pgTable("vehicles", {
-  id: serial("id").primaryKey(),
-  vehicleNumber: text("vehicle_number").notNull().unique(),
-  vendorId: integer("vendor_id").references(() => vendors.id).notNull(),
-  driverName: text("driver_name").notNull(),
-  driverPhotoUrl: text("driver_photo_url"),
   createdAt: timestamp("created_at").defaultNow(),
 });
+
+// export const vehicles = pgTable("vehicles", {
+//   id: serial("id").primaryKey(),
+//   vehicleNumber: text("vehicle_number").notNull().unique(),
+//   vendorId: integer("vendor_id").references(() => vendors.id).notNull(),
+//   driverName: text("driver_name").notNull(),
+//   driverPhotoUrl: text("driver_photo_url"),
+//   createdAt: timestamp("created_at").defaultNow(),
+// });
+export const vehicles = pgTable("vehicles", {
+  id: serial("id").primaryKey(),
+  vehicleNumber: varchar("vehicle_number", { length: 50 }).notNull().unique(),
+  vendorId: integer("vendor_id").references(() => vendors.id),
+  driverName: varchar("driver_name", { length: 255 }).notNull(),
+  driverPhotoUrl: varchar("driver_photo_url", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+
+// NEW: Vehicle-specific loaders table
+export const vehicleLoaders = pgTable("vehicle_loaders", {
+  id: serial("id").primaryKey(),
+  vehicleId: integer("vehicle_id").references(() => vehicles.id).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  phoneNumber: varchar("phone_number", { length: 20 }),
+  photoUrl: varchar("photo_url", { length: 500 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// NEW: Vendor-store supervisors table
+export const vendorSupervisors = pgTable("vendor_supervisors", {
+  id: serial("id").primaryKey(),
+  vendorId: integer("vendor_id").references(() => vendors.id).notNull(),
+  storeId: integer("store_id").references(() => stores.id).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  phoneNumber: varchar("phone_number", { length: 20 }),
+  photoUrl: varchar("photo_url", { length: 500 }),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 
 export const checkins = pgTable("checkins", {
   id: serial("id").primaryKey(),
@@ -43,26 +102,71 @@ export const checkins = pgTable("checkins", {
   vendorId: integer("vendor_id").references(() => vendors.id).notNull(),
   operatorId: integer("operator_id").references(() => users.id),
   purpose: text("purpose"),
-  openingKm: integer("opening_km"),
+  // openingKm: integer("opening_km"),
+  // openingKmTimestamp: timestamp("opening_km_timestamp"),
+  // closingKm: integer("closing_km"),
+  // closingKmTimestamp: timestamp("closing_km_timestamp"),
+  // KM readings with fraud detection
+  openingKm: decimal("opening_km", { precision: 10, scale: 2 }),
   openingKmTimestamp: timestamp("opening_km_timestamp"),
-  closingKm: integer("closing_km"),
+  closingKm: decimal("closing_km", { precision: 10, scale: 2 }),
   closingKmTimestamp: timestamp("closing_km_timestamp"),
-  status: text("status").notNull().default("In"), // 'In' | 'Out' | 'Completed'
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  // Fraud detection flags
+  isFraudulent: boolean("is_fraudulent").default(false),
+  fraudFlags: jsonb("fraud_flags"), // Store array of fraud types
+  fraudNotes: text("fraud_notes"),
+
+  // status: text("status").notNull().default("In"), // 'In' | 'Out' | 'Completed'
+  // createdAt: timestamp("created_at").defaultNow(),
+  // updatedAt: timestamp("updated_at").defaultNow(),
   // Denormalized fields for faster queries
-  vehicleNumber: text("vehicle_number").notNull(),
-  vendorName: text("vendor_name").notNull(),
-  driverName: text("driver_name").notNull(),
-  storeName: text("store_name").notNull(),
+//   vehicleNumber: text("vehicle_number").notNull(),
+//   vendorName: text("vendor_name").notNull(),
+//   driverName: text("driver_name").notNull(),
+//   storeName: text("store_name").notNull(),
+// });
+   
+  status: varchar("status", { length: 20 }).notNull(), // 'In' | 'Out' | 'Completed'
+  // Denormalized fields for performance
+    vehicleNumber: varchar("vehicle_number", { length: 50 }).notNull(),
+    vendorName: varchar("vendor_name", { length: 255 }).notNull(),
+    driverName: varchar("driver_name", { length: 255 }).notNull(),
+    storeName: varchar("store_name", { length: 255 }).notNull(),
+
+    createdAt: timestamp("created_at").defaultNow(),
+    updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// export const manpower = pgTable("manpower", {
+//   id: serial("id").primaryKey(),
+//   checkinId: integer("checkin_id").references(() => checkins.id).notNull(),
+//   name: text("name").notNull(),
+//   idNumber: text("id_number"),
+//   photoUrl: text("photo_url"),
+// });
+// Updated manpower table to link loaders to vehicles
 export const manpower = pgTable("manpower", {
   id: serial("id").primaryKey(),
   checkinId: integer("checkin_id").references(() => checkins.id).notNull(),
-  name: text("name").notNull(),
-  idNumber: text("id_number"),
-  photoUrl: text("photo_url"),
+  vehicleLoaderId: integer("vehicle_loader_id").references(() => vehicleLoaders.id), // Link to vehicle loader
+  name: varchar("name", { length: 255 }).notNull(),
+  role: varchar("role", { length: 50 }).notNull(), // 'loader' | 'helper'
+  idNumber: varchar("id_number", { length: 50 }),
+  photoUrl: varchar("photo_url", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// NEW: Fraud detection logs table
+export const fraudLogs = pgTable("fraud_logs", {
+  id: serial("id").primaryKey(),
+  checkinId: integer("checkin_id").references(() => checkins.id).notNull(),
+  fraudType: varchar("fraud_type", { length: 100 }).notNull(),
+  description: text("description").notNull(),
+  severity: varchar("severity", { length: 20 }).notNull(), // 'low' | 'medium' | 'high'
+  isResolved: boolean("is_resolved").default(false),
+  resolvedBy: integer("resolved_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Insert schemas
@@ -98,6 +202,15 @@ export const vehicleEntrySchema = z.object({
   })).optional(),
 });
 
+export const insertVehicleLoaderSchema = createInsertSchema(vehicleLoaders).omit({ id: true });
+export const insertVendorSupervisorSchema = createInsertSchema(vendorSupervisors).omit({ id: true });
+export const insertFraudLogSchema = createInsertSchema(fraudLogs).omit({ id: true });
+export const selectVehicleLoaderSchema = createSelectSchema(vehicleLoaders);
+export const selectVendorSupervisorSchema = createSelectSchema(vendorSupervisors);
+export const selectFraudLogSchema = createSelectSchema(fraudLogs);
+
+
+
 // Export types
 export type Store = typeof stores.$inferSelect;
 export type User = typeof users.$inferSelect;
@@ -115,3 +228,11 @@ export type InsertManpower = z.infer<typeof insertManpowerSchema>;
 
 export type LoginData = z.infer<typeof loginSchema>;
 export type VehicleEntryData = z.infer<typeof vehicleEntrySchema>;
+
+export type InsertVehicleLoader = z.infer<typeof insertVehicleLoaderSchema>;
+export type InsertVendorSupervisor = z.infer<typeof insertVendorSupervisorSchema>;
+export type InsertFraudLog = z.infer<typeof insertFraudLogSchema>;
+
+export type VehicleLoader = z.infer<typeof selectVehicleLoaderSchema>;
+export type VendorSupervisor = z.infer<typeof selectVendorSupervisorSchema>;
+export type FraudLog = z.infer<typeof selectFraudLogSchema>;
