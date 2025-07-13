@@ -38,9 +38,11 @@ export const vehicles = pgTable("vehicles", {
 
 export const checkins = pgTable("checkins", {
   id: serial("id").primaryKey(),
-  vehicleId: integer("vehicle_id").references(() => vehicles.id).notNull(),
+  vehicleId: integer("vehicle_id").references(() => vehicles.id),
   storeId: integer("store_id").references(() => stores.id).notNull(),
-  operatorId: integer("operator_id").references(() => users.id).notNull(),
+  vendorId: integer("vendor_id").references(() => vendors.id).notNull(),
+  operatorId: integer("operator_id").references(() => users.id),
+  purpose: text("purpose"),
   openingKm: integer("opening_km"),
   openingKmTimestamp: timestamp("opening_km_timestamp"),
   closingKm: integer("closing_km"),
@@ -59,7 +61,7 @@ export const manpower = pgTable("manpower", {
   id: serial("id").primaryKey(),
   checkinId: integer("checkin_id").references(() => checkins.id).notNull(),
   name: text("name").notNull(),
-  role: text("role").notNull(), // 'loader' | 'supervisor'
+  idNumber: text("id_number"),
   photoUrl: text("photo_url"),
 });
 
@@ -91,7 +93,7 @@ export const vehicleEntrySchema = z.object({
   openingKm: z.number().optional(),
   manpower: z.array(z.object({
     name: z.string().min(1, "Name is required"),
-    role: z.enum(["loader", "supervisor"]),
+    role: z.string().min(1, "Role is required"),
     photoUrl: z.string().optional(),
   })).optional(),
 });

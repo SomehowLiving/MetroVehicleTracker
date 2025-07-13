@@ -37,6 +37,7 @@ export interface IStorage {
   getVehicleByNumber(vehicleNumber: string): Promise<Vehicle | undefined>;
   getVehicleById(id: number): Promise<Vehicle | undefined>;
   createVehicle(vehicle: InsertVehicle): Promise<Vehicle>;
+  updateVehicle(id: number, updates: Partial<Vehicle>): Promise<Vehicle>;
   
   // Checkins
   getCheckinById(id: number): Promise<Checkin | undefined>;
@@ -153,6 +154,19 @@ export class PostgresStorage implements IStorage {
         .insert(vehicles)
         .values(vehicle)
         .returning();
+      return result[0];
+    }
+
+    async updateVehicle(id: number, updates: Partial<Vehicle>): Promise<Vehicle> {
+      const result = await db
+        .update(vehicles)
+        .set(updates)
+        .where(eq(vehicles.id, id))
+        .returning();
+
+      if (!result[0]) {
+        throw new Error(`Vehicle with id ${id} not found`);
+      }
       return result[0];
     }
 

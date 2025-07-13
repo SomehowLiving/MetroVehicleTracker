@@ -112,7 +112,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/vehicles/entry", async (req, res) => {
     try {
       const entryData = vehicleEntrySchema.parse(req.body);
-      const { storeId, operatorId } = req.body; // These should come from auth middleware
+      const { storeId = 1, operatorId = 1 } = req.body; // Default values for testing
 
       // Check for duplicate entry
       const existingVehicle = await storage.getVehicleByNumber(
@@ -149,13 +149,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           driverName: entryData.driverName,
           driverPhotoUrl: entryData.driverPhotoUrl,
         });
+      } else if (entryData.driverPhotoUrl) {
+        // Update existing vehicle with new photo URL if provided
+        vehicle = await storage.updateVehicle(vehicle.id, {
+          driverPhotoUrl: entryData.driverPhotoUrl,
+        });
       }
 
       // Create checkin record
       const checkin = await storage.createCheckin({
         vehicleId: vehicle.id,
         storeId: storeId,
+        vendorId: entryData.vendorId,
         operatorId: operatorId,
+        purpose: "Delivery", // Default purpose
         openingKm: entryData.openingKm,
         openingKmTimestamp: entryData.openingKm ? new Date() : null,
         closingKm: null,
@@ -173,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.createManpower({
             checkinId: checkin.id,
             name: person.name,
-            role: person.role,
+            idNumber: person.role, // Using role as idNumber for now
             photoUrl: person.photoUrl,
           });
         }

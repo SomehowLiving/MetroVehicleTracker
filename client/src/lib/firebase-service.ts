@@ -19,6 +19,15 @@ export const photoManager = {
     const fileRef = ref(storage, path);
     await uploadBytes(fileRef, file);
     return getDownloadURL(fileRef);
+  },
+
+  // Add methods that match server expectations
+  async handleDriverPhotoUpload(file: File, vehicleNumber: string): Promise<string> {
+    return this.uploadDriverPhoto(file, vehicleNumber);
+  },
+
+  async handleManpowerPhotoUpload(file: File, checkinId: number, name: string): Promise<string> {
+    return this.uploadManpowerPhoto(file, checkinId, name);
   }
 };
 
