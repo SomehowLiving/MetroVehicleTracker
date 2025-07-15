@@ -38,7 +38,6 @@ import {
   type FraudCheck,
 } from "@shared/schema";
 
-
 // Database connection
 if (!process.env.DATABASE_URL) {
   console.error("❌ DATABASE_URL environment variable is not set");
@@ -152,7 +151,10 @@ export interface IStorage {
     unresolvedAlerts: number;
     fraudByType: Array<{ type: string; count: number; severity: string }>;
   }>;
-    getFraudulentCheckinsWithDetails(storeId?: number, limit?: number): Promise<any[]>;
+  getFraudulentCheckinsWithDetails(
+    storeId?: number,
+    limit?: number,
+  ): Promise<any[]>;
 
   // Dashboard queries
   getTodaysCheckinsCount(storeId?: number): Promise<number>;
@@ -170,15 +172,23 @@ export interface IStorage {
   getFsdCheckinById(id: number): Promise<any | undefined>;
 
   // Supervisor Checkin methods
-  createSupervisorCheckin(checkin: InsertSupervisorCheckin): Promise<SupervisorCheckin>;
-  updateSupervisorCheckin(id: number, updates: Partial<SupervisorCheckin>): Promise<SupervisorCheckin>;
+  createSupervisorCheckin(
+    checkin: InsertSupervisorCheckin,
+  ): Promise<SupervisorCheckin>;
+  updateSupervisorCheckin(
+    id: number,
+    updates: Partial<SupervisorCheckin>,
+  ): Promise<SupervisorCheckin>;
   getSupervisorCheckinsByStore(storeId: number): Promise<SupervisorCheckin[]>;
   getActiveSupervisorCheckins(storeId?: number): Promise<SupervisorCheckin[]>;
   getSupervisorCheckinById(id: number): Promise<SupervisorCheckin | undefined>;
 
-  // Labour Checkin methods  
+  // Labour Checkin methods
   createLabourCheckin(checkin: InsertLabourCheckin): Promise<LabourCheckin>;
-  updateLabourCheckin(id: number, updates: Partial<LabourCheckin>): Promise<LabourCheckin>;
+  updateLabourCheckin(
+    id: number,
+    updates: Partial<LabourCheckin>,
+  ): Promise<LabourCheckin>;
   getLabourCheckinsByStore(storeId: number): Promise<LabourCheckin[]>;
   getActiveLabourCheckins(storeId?: number): Promise<LabourCheckin[]>;
   getLabourCheckinById(id: number): Promise<LabourCheckin | undefined>;
@@ -459,10 +469,7 @@ export class PostgresStorage implements IStorage {
       .select()
       .from(vendorSupervisors)
       .where(
-        and(
-          eq(vendorSupervisors.id, id),
-          eq(vendorSupervisors.isActive, true)
-        )
+        and(eq(vendorSupervisors.id, id), eq(vendorSupervisors.isActive, true)),
       )
       .limit(1);
     return result[0] || null;
@@ -470,7 +477,7 @@ export class PostgresStorage implements IStorage {
 
   async updateVendorSupervisor(
     id: number,
-    updates: Partial<InsertVendorSupervisor>
+    updates: Partial<InsertVendorSupervisor>,
   ): Promise<VendorSupervisor> {
     const result = await db
       .update(vendorSupervisors)
@@ -483,14 +490,14 @@ export class PostgresStorage implements IStorage {
   async searchVendorSupervisors(
     query: string,
     vendorId?: number,
-    storeId?: number
+    storeId?: number,
   ): Promise<VendorSupervisor[]> {
     const conditions = [
       eq(vendorSupervisors.isActive, true),
       or(
         ilike(vendorSupervisors.name, `%${query}%`),
-        ilike(vendorSupervisors.aadhaarNumber, `%${query}%`)
-      )
+        ilike(vendorSupervisors.aadhaarNumber, `%${query}%`),
+      ),
     ];
 
     if (vendorId) {
@@ -522,15 +529,17 @@ export class PostgresStorage implements IStorage {
       .orderBy(vendorSupervisors.name);
   }
 
-  async getVendorSupervisorsByVendor(vendorId: number): Promise<VendorSupervisor[]> {
+  async getVendorSupervisorsByVendor(
+    vendorId: number,
+  ): Promise<VendorSupervisor[]> {
     return await db
       .select()
       .from(vendorSupervisors)
       .where(
         and(
           eq(vendorSupervisors.vendorId, vendorId),
-          eq(vendorSupervisors.isActive, true)
-        )
+          eq(vendorSupervisors.isActive, true),
+        ),
       )
       .orderBy(vendorSupervisors.name);
   }
@@ -662,10 +671,11 @@ export class PostgresStorage implements IStorage {
     return { checkin: createdCheckin, fraudChecks };
   }
 
-  async getFraudulentCheckinsWithDetails(storeId?: number, limit: number = 50): Promise<any[]> {
-    const conditions = [
-      eq(fraudLogs.isResolved, false)
-    ];
+  async getFraudulentCheckinsWithDetails(
+    storeId?: number,
+    limit: number = 50,
+  ): Promise<any[]> {
+    const conditions = [eq(fraudLogs.isResolved, false)];
 
     if (storeId) {
       conditions.push(eq(checkins.storeId, storeId));
@@ -688,17 +698,20 @@ export class PostgresStorage implements IStorage {
       })
       .from(checkins)
       .innerJoin(fraudLogs, eq(fraudLogs.checkinId, checkins.id))
-      .leftJoin(vendorSupervisors, and(
-        eq(vendorSupervisors.vendorId, checkins.vendorId),
-        eq(vendorSupervisors.storeId, checkins.storeId),
-        eq(vendorSupervisors.isActive, true)
-      ))
+      .leftJoin(
+        vendorSupervisors,
+        and(
+          eq(vendorSupervisors.vendorId, checkins.vendorId),
+          eq(vendorSupervisors.storeId, checkins.storeId),
+          eq(vendorSupervisors.isActive, true),
+        ),
+      )
       .innerJoin(stores, eq(stores.id, checkins.storeId)) // Join with stores table
       .where(and(...conditions))
       .orderBy(desc(checkins.createdAt))
       .limit(limit);
 
-      return result;
+    return result;
   }
 
   // Dashboard methods
@@ -840,7 +853,10 @@ export class PostgresStorage implements IStorage {
     return result[0];
   }
 
-  async updateFsdCheckin(id: number, updates: Partial<FsdCheckin>): Promise<FsdCheckin> {
+  async updateFsdCheckin(
+    id: number,
+    updates: Partial<FsdCheckin>,
+  ): Promise<FsdCheckin> {
     const result = await db
       .update(fsdCheckins)
       .set({ ...updates, updatedAt: new Date() })
@@ -879,12 +895,20 @@ export class PostgresStorage implements IStorage {
   }
 
   // Supervisor Checkin methods
-  async createSupervisorCheckin(checkin: InsertSupervisorCheckin): Promise<SupervisorCheckin> {
-    const result = await db.insert(supervisorCheckins).values(checkin).returning();
+  async createSupervisorCheckin(
+    checkin: InsertSupervisorCheckin,
+  ): Promise<SupervisorCheckin> {
+    const result = await db
+      .insert(supervisorCheckins)
+      .values(checkin)
+      .returning();
     return result[0];
   }
 
-  async updateSupervisorCheckin(id: number, updates: Partial<SupervisorCheckin>): Promise<SupervisorCheckin> {
+  async updateSupervisorCheckin(
+    id: number,
+    updates: Partial<SupervisorCheckin>,
+  ): Promise<SupervisorCheckin> {
     const result = await db
       .update(supervisorCheckins)
       .set({ ...updates, updatedAt: new Date() })
@@ -897,7 +921,9 @@ export class PostgresStorage implements IStorage {
     return result[0];
   }
 
-  async getSupervisorCheckinsByStore(storeId: number): Promise<SupervisorCheckin[]> {
+  async getSupervisorCheckinsByStore(
+    storeId: number,
+  ): Promise<SupervisorCheckin[]> {
     return await db
       .select()
       .from(supervisorCheckins)
@@ -905,7 +931,9 @@ export class PostgresStorage implements IStorage {
       .orderBy(desc(supervisorCheckins.createdAt));
   }
 
-  async getActiveSupervisorCheckins(storeId?: number): Promise<SupervisorCheckin[]> {
+  async getActiveSupervisorCheckins(
+    storeId?: number,
+  ): Promise<SupervisorCheckin[]> {
     const conditions = [eq(supervisorCheckins.status, "In")];
     if (storeId) {
       conditions.push(eq(supervisorCheckins.storeId, storeId));
@@ -918,7 +946,9 @@ export class PostgresStorage implements IStorage {
       .orderBy(desc(supervisorCheckins.checkinTime));
   }
 
-  async getSupervisorCheckinById(id: number): Promise<SupervisorCheckin | undefined> {
+  async getSupervisorCheckinById(
+    id: number,
+  ): Promise<SupervisorCheckin | undefined> {
     const result = await db
       .select()
       .from(supervisorCheckins)
@@ -928,12 +958,17 @@ export class PostgresStorage implements IStorage {
   }
 
   // Labour Checkin methods
-  async createLabourCheckin(checkin: InsertLabourCheckin): Promise<LabourCheckin> {
+  async createLabourCheckin(
+    checkin: InsertLabourCheckin,
+  ): Promise<LabourCheckin> {
     const result = await db.insert(labourCheckins).values(checkin).returning();
     return result[0];
   }
 
-  async updateLabourCheckin(id: number, updates: Partial<LabourCheckin>): Promise<LabourCheckin> {
+  async updateLabourCheckin(
+    id: number,
+    updates: Partial<LabourCheckin>,
+  ): Promise<LabourCheckin> {
     const result = await db
       .update(labourCheckins)
       .set({ ...updates, updatedAt: new Date() })
@@ -955,7 +990,6 @@ export class PostgresStorage implements IStorage {
   }
 
   async getActiveLabourCheckins(storeId?: number): Promise<LabourCheckin[]> {
-```text
     const conditions = [eq(labourCheckins.status, "In")];
     if (storeId) {
       conditions.push(eq(labourCheckins.storeId, storeId));
@@ -977,12 +1011,19 @@ export class PostgresStorage implements IStorage {
     return result[0];
   }
 
-  async createVendorSupervisor(supervisor: InsertVendorSupervisor): Promise<VendorSupervisor> {
-    const result = await db.insert(vendorSupervisors).values(supervisor).returning();
+  async createVendorSupervisor(
+    supervisor: InsertVendorSupervisor,
+  ): Promise<VendorSupervisor> {
+    const result = await db
+      .insert(vendorSupervisors)
+      .values(supervisor)
+      .returning();
     return result[0];
   }
 
-  async createVendorLoader(loader: InsertVehicleLoader): Promise<VehicleLoader> {
+  async createVendorLoader(
+    loader: InsertVehicleLoader,
+  ): Promise<VehicleLoader> {
     const result = await db.insert(vehicleLoaders).values(loader).returning();
     return result[0];
   }
