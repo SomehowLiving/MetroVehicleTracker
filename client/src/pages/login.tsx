@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Building, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Eye, EyeOff } from "lucide-react";
@@ -59,7 +65,11 @@ export default function Login() {
               </div>
             </div>
             <CardTitle className="text-2xl text-center">
-              {role === "admin" ? "Admin Login" : role === "fsd" ? "Store Supervisor Login" : "Gate Operator Login"}
+              {role === "admin"
+                ? "Admin Login"
+                : role === "fsd"
+                  ? "Store Supervisor Login"
+                  : "Gate Operator Login"}
             </CardTitle>
             <p className="text-center text-gray-600">
               Metro Cash & Carry Vehicle Tracking System
@@ -76,7 +86,11 @@ export default function Login() {
               {role === "fsd" && (
                 <div className="space-y-2">
                   <Label htmlFor="store">Select Store</Label>
-                  <Select value={selectedStoreId} onValueChange={setSelectedStoreId} required>
+                  <Select
+                    value={selectedStoreId}
+                    onValueChange={setSelectedStoreId}
+                    required
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select your store" />
                     </SelectTrigger>
@@ -151,7 +165,7 @@ export default function Login() {
             {role === "gate-operator" && (
               <div className="text-center text-sm text-gray-600">
                 <p>Demo credentials:</p>
-                <p>Username: op11, Password: 123</p>
+                <p>Username: op01, Password: 123</p>
               </div>
             )}
 

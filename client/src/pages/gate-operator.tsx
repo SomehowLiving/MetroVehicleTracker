@@ -6,7 +6,7 @@ import { Building, LogOut, User, Search, Download, Clock } from "lucide-react";
 import { useRequireAuth } from "@/hooks/use-auth";
 import { useAuth } from "@/lib/auth";
 import { useWebSocket } from "@/hooks/use-websocket";
-import { VehicleForm } from "@/components/vehicle-form";
+import VehicleForm from "@/components/vehicle-form";
 import { VehicleTable } from "@/components/vehicle-table";
 import { SupervisorCheckinForm } from "@/components/supervisor-checkin-form";
 import { LabourCheckinForm } from "@/components/labour-checkin-form";
@@ -36,8 +36,11 @@ export default function GateOperator() {
   // Handle real-time updates
   useEffect(() => {
     if (lastMessage) {
-      if (lastMessage.type === 'vehicle_entry' || lastMessage.type === 'vehicle_exit') {
-        setRefreshKey(prev => prev + 1);
+      if (
+        lastMessage.type === "vehicle_entry" ||
+        lastMessage.type === "vehicle_exit"
+      ) {
+        setRefreshKey((prev) => prev + 1);
       }
     }
   }, [lastMessage]);
@@ -59,14 +62,20 @@ export default function GateOperator() {
                 <Building className="text-white h-5 w-5" />
               </div>
               <div>
-                <h1 className="text-lg font-bold text-gray-900">{store?.name || "Metro Store"}</h1>
+                <h1 className="text-lg font-bold text-gray-900">
+                  {store?.name || "Metro Store"}
+                </h1>
                 <p className="text-sm text-gray-600">Gate Operator Panel</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success' : 'bg-error'}`} />
-                <span className="text-sm text-gray-600">{isConnected ? 'Online' : 'Offline'}</span>
+                <div
+                  className={`w-2 h-2 rounded-full ${isConnected ? "bg-success" : "bg-error"}`}
+                />
+                <span className="text-sm text-gray-600">
+                  {isConnected ? "Online" : "Offline"}
+                </span>
               </div>
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
@@ -74,7 +83,11 @@ export default function GateOperator() {
                 </div>
                 <span className="text-sm text-gray-700">{user.name}</span>
               </div>
-              <Button variant="ghost" onClick={logout} className="text-gray-500 hover:text-gray-700">
+              <Button
+                variant="ghost"
+                onClick={logout}
+                className="text-gray-500 hover:text-gray-700"
+              >
                 <LogOut className="h-4 w-4" />
               </Button>
             </div>
@@ -85,7 +98,6 @@ export default function GateOperator() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
           {/* Vehicle Entry Form */}
           <div className="lg:col-span-2">
             <VehicleForm storeId={user.storeId!} operatorId={user.id} />
@@ -101,15 +113,21 @@ export default function GateOperator() {
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Total Check-ins</span>
-                  <span className="text-2xl font-bold text-success">{todaysKpis?.todaysCheckins || 0}</span>
+                  <span className="text-2xl font-bold text-success">
+                    {todaysKpis?.todaysCheckins || 0}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Currently Inside</span>
-                  <span className="text-2xl font-bold text-warning">{todaysKpis?.currentlyInside || 0}</span>
+                  <span className="text-2xl font-bold text-warning">
+                    {todaysKpis?.currentlyInside || 0}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Extended Stays</span>
-                  <span className="text-2xl font-bold text-error">{todaysKpis?.extendedStays || 0}</span>
+                  <span className="text-2xl font-bold text-error">
+                    {todaysKpis?.extendedStays || 0}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -122,15 +140,31 @@ export default function GateOperator() {
               <CardContent>
                 <div className="space-y-3">
                   {recentActivity?.slice(0, 5).map((entry: any) => (
-                    <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div
+                      key={entry.id}
+                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                    >
                       <div>
-                        <div className="font-semibold text-gray-900">{entry.vehicleNumber}</div>
-                        <div className="text-sm text-gray-600">{entry.driverName}</div>
+                        <div className="font-semibold text-gray-900">
+                          {entry.vehicleNumber}
+                        </div>
+                        <div className="text-sm text-gray-600">
+                          {entry.driverName}
+                        </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm text-gray-500">{new Date(entry.createdAt).toLocaleTimeString()}</div>
-                        <Badge variant={entry.status === 'In' ? 'default' : 'secondary'} className={entry.status === 'In' ? 'bg-success' : 'bg-error'}>
-                          {entry.status === 'In' ? 'Check-in' : 'Check-out'}
+                        <div className="text-sm text-gray-500">
+                          {new Date(entry.createdAt).toLocaleTimeString()}
+                        </div>
+                        <Badge
+                          variant={
+                            entry.status === "In" ? "default" : "secondary"
+                          }
+                          className={
+                            entry.status === "In" ? "bg-success" : "bg-error"
+                          }
+                        >
+                          {entry.status === "In" ? "Check-in" : "Check-out"}
                         </Badge>
                       </div>
                     </div>
