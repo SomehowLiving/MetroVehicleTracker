@@ -204,7 +204,7 @@ export const fsdCheckins = pgTable("fsd_checkins", {
   phoneNumber: varchar("phone_number", { length: 20 }),
   photoUrl: varchar("photo_url", { length: 500 }),
   notes: text("notes"),
-  createdBy: integer("created_by").references(() => users.id),
+  createdBy: integer("created_by").references(() => users.id).default(1),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

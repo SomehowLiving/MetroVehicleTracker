@@ -849,6 +849,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...checkinData,
         status: "In",
         checkinTime: new Date(),
+        createdBy: checkinData.fsdId || 1, // Use fsdId as created_by or default to 1
       });
 
       res.json(checkin);
