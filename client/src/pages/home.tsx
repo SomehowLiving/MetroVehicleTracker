@@ -80,7 +80,7 @@ export default function Home() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center mb-12">
           <h2 className="text-4xl font-bold text-white mb-4">Select Your Store Location</h2>
-          <p className="text-xl text-blue-100 max-w-2xl mx-auto">
+          <p className="text-xl text-blue-800 max-w-2xl mx-auto">
             Digital gate log management system for all 32 Metro stores. Track vehicle movements, manage driver data, and maintain real-time attendance records.
           </p>
         </div>
@@ -129,25 +129,25 @@ export default function Home() {
           <Card className="bg-white/10 backdrop-blur-sm border-white/20">
             <CardContent className="p-6 text-center">
               <div className="text-3xl font-bold text-white mb-2">{totalStores}</div>
-              <div className="text-blue-100">Total Stores</div>
+              <div className="text-blue-800">Total Stores</div>
             </CardContent>
           </Card>
           <Card className="bg-white/10 backdrop-blur-sm border-white/20">
             <CardContent className="p-6 text-center">
               <div className="text-3xl font-bold text-metro-yellow mb-2">{totalVehicles}</div>
-              <div className="text-blue-100">Active Vehicles</div>
+              <div className="text-blue-800">Active Vehicles</div>
             </CardContent>
           </Card>
           <Card className="bg-white/10 backdrop-blur-sm border-white/20">
             <CardContent className="p-6 text-center">
               <div className="text-3xl font-bold text-success mb-2">{todaysCheckins}</div>
-              <div className="text-blue-100">Today's Check-ins</div>
+              <div className="text-blue-800">Today's Check-ins</div>
             </CardContent>
           </Card>
           <Card className="bg-white/10 backdrop-blur-sm border-white/20">
             <CardContent className="p-6 text-center">
               <div className="text-3xl font-bold text-white mb-2">98.5%</div>
-              <div className="text-blue-100">System Uptime</div>
+              <div className="text-blue-800">System Uptime</div>
             </CardContent>
           </Card>
         </div>
