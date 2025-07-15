@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Building, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { Eye, EyeOff } from "lucide-react";
@@ -13,6 +15,7 @@ export default function Login() {
   const [, setLocation] = useLocation();
   const { login } = useAuth();
   const [formData, setFormData] = useState({ username: "", password: "" });
+  const [selectedStoreId, setSelectedStoreId] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -21,6 +24,12 @@ export default function Login() {
   const urlParams = new URLSearchParams(window.location.search);
   const role = urlParams.get("role") || "gate-operator";
   const storeId = urlParams.get("storeId");
+
+  // Fetch stores for FSD login
+  const { data: stores } = useQuery({
+    queryKey: ["/api/stores"],
+    enabled: role === "fsd",
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +59,7 @@ export default function Login() {
               </div>
             </div>
             <CardTitle className="text-2xl text-center">
-              {role === "admin" ? "Admin Login" : "Gate Operator Login"}
+              {role === "admin" ? "Admin Login" : role === "fsd" ? "Store Supervisor Login" : "Gate Operator Login"}
             </CardTitle>
             <p className="text-center text-gray-600">
               Metro Cash & Carry Vehicle Tracking System
@@ -64,6 +73,24 @@ export default function Login() {
             )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {role === "fsd" && (
+                <div className="space-y-2">
+                  <Label htmlFor="store">Select Store</Label>
+                  <Select value={selectedStoreId} onValueChange={setSelectedStoreId} required>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select your store" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stores?.map((store: any) => (
+                        <SelectItem key={store.id} value={store.id.toString()}>
+                          {store.name} - {store.location}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
                 <Input
@@ -132,6 +159,15 @@ export default function Login() {
               <div className="text-center text-sm text-gray-600">
                 <p>Demo credentials:</p>
                 <p>Username: admin, Password: admin123</p>
+              </div>
+            )}
+
+            {role === "fsd" && (
+              <div className="text-center text-sm text-gray-600">
+                <p>Demo credentials:</p>
+                <p>Username: fsd01, Password: 123</p>
+                <p>Username: fsd02, Password: 123</p>
+                <p>Username: fsd03, Password: 123</p>
               </div>
             )}
           </CardContent>

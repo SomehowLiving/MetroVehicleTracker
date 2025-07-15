@@ -7,6 +7,7 @@ import { AuthProvider } from "./lib/auth.tsx";
 import Home from "@/pages/home";
 import Login from "@/pages/login";
 import GateOperator from "@/pages/gate-operator";
+import FsdDashboard from "@/pages/fsd-dashboard";
 import Admin from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 
@@ -16,6 +17,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/login" component={Login} />
       <Route path="/gate-operator" component={GateOperator} />
+      <Route path="/fsd-dashboard" component={FsdDashboard} />
       <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>

@@ -828,6 +828,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // FSD Checkin routes
+  app.post("/api/fsd/checkin", async (req, res) => {
+    try {
+      const checkinData = req.body;
+      
+      // Check if FSD is already checked in
+      const activeFsdCheckins = await storage.getActiveFsdCheckins();
+      const existingCheckin = activeFsdCheckins.find(
+        (c) => c.fsdId === checkinData.fsdId && c.storeId === checkinData.storeId
+      );
+
+      if (existingCheckin) {
+        return res.status(400).json({ message: "FSD is already checked in" });
+      }
+
+      const checkin = await storage.createFsdCheckin({
+        ...checkinData,
+        status: "In",
+        checkinTime: new Date(),
+      });
+
+      res.json(checkin);
+    } catch (error) {
+      console.error("FSD checkin error:", error);
+      res.status(500).json({ message: "Error creating FSD checkin" });
+    }
+  });
+
+  app.post("/api/fsd/checkout", async (req, res) => {
+    try {
+      const { checkinId } = req.body;
+
+      const checkin = await storage.getFsdCheckinById(checkinId);
+      if (!checkin) {
+        return res.status(404).json({ message: "FSD checkin not found" });
+      }
+
+      if (checkin.status !== "In") {
+        return res.status(400).json({ message: "FSD is not checked in" });
+      }
+
+      const updatedCheckin = await storage.updateFsdCheckin(checkinId, {
+        status: "Out",
+        checkoutTime: new Date(),
+      });
+
+      res.json(updatedCheckin);
+    } catch (error) {
+      console.error("FSD checkout error:", error);
+      res.status(500).json({ message: "Error processing FSD checkout" });
+    }
+  });
+
+  app.get("/api/fsd/checkins", async (req, res) => {
+    try {
+      const { storeId } = req.query;
+      
+      if (storeId) {
+        const checkins = await storage.getFsdCheckinsByStore(parseInt(storeId as string));
+        res.json(checkins);
+      } else {
+        const activeCheckins = await storage.getActiveFsdCheckins();
+        res.json(activeCheckins);
+      }
+    } catch (error) {
+      console.error("Error fetching FSD checkins:", error);
+      res.status(500).json({ message: "Error fetching FSD checkins" });
+    }
+  });
+
   return httpServer;
 }
 function generateCSV(data: any[]): string {

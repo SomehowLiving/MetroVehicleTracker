@@ -57,6 +57,14 @@ export default function Home() {
                 Admin Login
               </Button>
               <Button
+                variant="outline"
+                onClick={() => setLocation("/login?role=fsd")}
+                className="border-green-500 text-green-600 hover:bg-green-500 hover:text-white"
+              >
+                <Building className="mr-2 h-4 w-4" />
+                Store Login
+              </Button>
+              <Button
                 onClick={() => setLocation("/login?role=gate_operator")}
                 className="bg-metro-yellow text-metro-blue hover:bg-yellow-400"
               >

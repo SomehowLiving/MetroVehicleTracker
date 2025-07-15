@@ -11,6 +11,7 @@ import { KPICards } from "@/components/kpi-cards";
 import { VehicleTable } from "@/components/vehicle-table";
 import { ExportPanel } from "@/components/export-panel";
 import { FraudDetectionDashboard } from "@/components/fraud-detection-dashboard";
+import { FsdAttendanceWidget } from "@/components/fsd-attendance-widget";
 import { useEffect, useState } from "react";
 
 export default function Admin() {
@@ -299,6 +300,16 @@ export default function Admin() {
                     )}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            {/* FSD Attendance */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Store Supervisor Attendance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <FsdAttendanceWidget refreshKey={refreshKey} />
               </CardContent>
             </Card>
 

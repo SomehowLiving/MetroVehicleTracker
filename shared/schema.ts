@@ -186,6 +186,28 @@ export const manpower = pgTable("manpower", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
+// FSD Supervisor checkins
+export const fsdCheckins = pgTable("fsd_checkins", {
+  id: serial("id").primaryKey(),
+  fsdId: integer("fsd_id")
+    .references(() => users.id)
+    .notNull(),
+  storeId: integer("store_id")
+    .references(() => stores.id)
+    .notNull(),
+  checkinTime: timestamp("checkin_time").defaultNow(),
+  checkoutTime: timestamp("checkout_time"),
+  status: varchar("status", { length: 20 }).notNull().default("In"), // 'In' | 'Out'
+  name: varchar("name", { length: 255 }).notNull(),
+  designation: varchar("designation", { length: 100 }).notNull().default("FSD Supervisor"),
+  aadhaarNumber: varchar("aadhaar_number", { length: 12 }),
+  phoneNumber: varchar("phone_number", { length: 20 }),
+  photoUrl: varchar("photo_url", { length: 500 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 /* ============================ ZOD VALIDATION SCHEMAS ============================ */
 
 // Basic insert schemas used in backend services
@@ -222,6 +244,27 @@ export const insertFraudLogSchema = createInsertSchema(fraudLogs).omit({
 export const insertCheckinLoaderSchema = createInsertSchema(
   checkinLoaders,
 ).omit({ id: true });
+
+export const insertFsdCheckinSchema = createInsertSchema(fsdCheckins).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// FSD form validation
+export const fsdFormSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  designation: z.string().min(2, "Designation is required"),
+  aadhaarNumber: z
+    .string()
+    .length(12, "Must be exactly 12 digits")
+    .regex(/^[0-9]{12}$/, "Digits only")
+    .optional(),
+  phoneNumber: z
+    .string()
+    .optional()
+    .refine((val) => !val || /^[0-9]{10}$/.test(val), "Must be 10 digits"),
+});
 
 // UPDATED: More comprehensive vehicle entry schema
 //-------------------------------working well-------------------------------//
@@ -367,7 +410,7 @@ export const loaderEntrySchema = z.object({
 export const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
-  role: z.enum(["admin", "gate_operator"]),
+  role: z.enum(["admin", "gate-operator", "fsd"]),
 });
 
 /* ============================ SELECT SCHEMAS ============================ */
@@ -391,6 +434,7 @@ export type VendorLoader = typeof vendorLoaders.$inferSelect;
 export type VendorSupervisor = typeof vendorSupervisors.$inferSelect;
 export type FraudLog = typeof fraudLogs.$inferSelect;
 export type CheckinLoader = typeof checkinLoaders.$inferSelect;
+export type FsdCheckin = typeof fsdCheckins.$inferSelect;
 
 // Insert types for creating records
 export type InsertStore = z.infer<typeof insertStoreSchema>;
@@ -405,11 +449,13 @@ export type InsertVendorSupervisor = z.infer<
 >;
 export type InsertFraudLog = z.infer<typeof insertFraudLogSchema>;
 export type InsertCheckinLoader = z.infer<typeof insertCheckinLoaderSchema>;
+export type InsertFsdCheckin = z.infer<typeof insertFsdCheckinSchema>;
 
 // Types for form validation on frontend
 export type VehicleFormData = z.infer<typeof vehicleFormSchema>;
 export type SupervisorFormData = z.infer<typeof supervisorFormSchema>;
 export type LoaderFormData = z.infer<typeof loaderFormSchema>;
+export type FsdFormData = z.infer<typeof fsdFormSchema>;
 
 // Types for API request payloads
 export type VehicleEntryData = z.infer<typeof vehicleEntrySchema>;

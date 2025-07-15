@@ -22,9 +22,10 @@ import { Truck, Eye, LogOut } from "lucide-react";
 
 interface VehicleTableProps {
   refreshKey?: number;
+  storeId?: string;
 }
 
-export function VehicleTable({ refreshKey }: VehicleTableProps) {
+export function VehicleTable({ refreshKey, storeId }: VehicleTableProps) {
   const [filters, setFilters] = useState({
     store: "all",
     status: "all",
@@ -32,7 +33,14 @@ export function VehicleTable({ refreshKey }: VehicleTableProps) {
   });
 
   const { data: vehicles, isLoading } = useQuery({
-    queryKey: ["/api/dashboard/active-vehicles", refreshKey],
+    queryKey: ["/api/dashboard/active-vehicles", storeId, refreshKey],
+    queryFn: async () => {
+      const url = storeId 
+        ? `/api/dashboard/active-vehicles?storeId=${storeId}`
+        : "/api/dashboard/active-vehicles";
+      const res = await fetch(url);
+      return res.json();
+    },
   });
 
   const { data: stores } = useQuery({

@@ -11,6 +11,7 @@ import {
   vehicleLoaders,
   vendorSupervisors,
   fraudLogs,
+  fsdCheckins,
   type Store,
   type User,
   type Vendor,
@@ -20,6 +21,7 @@ import {
   type VehicleLoader,
   type VendorSupervisor,
   type FraudLog,
+  type FsdCheckin,
   type InsertStore,
   type InsertUser,
   type InsertVendor,
@@ -29,6 +31,7 @@ import {
   type InsertVehicleLoader,
   type InsertVendorSupervisor,
   type InsertFraudLog,
+  type InsertFsdCheckin,
   type FraudCheck,
 } from "@shared/schema";
 
@@ -155,6 +158,13 @@ export interface IStorage {
   getStoreVehicleCounts(): Promise<
     { storeId: number; storeName: string; vehicleCount: number }[]
   >;
+
+  // FSD Checkin methods
+  createFsdCheckin(checkin: any): Promise<any>;
+  updateFsdCheckin(id: number, updates: any): Promise<any>;
+  getFsdCheckinsByStore(storeId: number): Promise<any[]>;
+  getActiveFsdCheckins(): Promise<any[]>;
+  getFsdCheckinById(id: number): Promise<any | undefined>;
 }
 
 export class PostgresStorage implements IStorage {
@@ -805,6 +815,50 @@ export class PostgresStorage implements IStorage {
         severity: row.severity,
       })),
     };
+  }
+
+  // FSD Checkin methods
+  async createFsdCheckin(checkin: InsertFsdCheckin): Promise<FsdCheckin> {
+    const result = await db.insert(fsdCheckins).values(checkin).returning();
+    return result[0];
+  }
+
+  async updateFsdCheckin(id: number, updates: Partial<FsdCheckin>): Promise<FsdCheckin> {
+    const result = await db
+      .update(fsdCheckins)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(fsdCheckins.id, id))
+      .returning();
+
+    if (!result[0]) {
+      throw new Error(`FSD checkin with id ${id} not found`);
+    }
+    return result[0];
+  }
+
+  async getFsdCheckinsByStore(storeId: number): Promise<FsdCheckin[]> {
+    return await db
+      .select()
+      .from(fsdCheckins)
+      .where(eq(fsdCheckins.storeId, storeId))
+      .orderBy(desc(fsdCheckins.createdAt));
+  }
+
+  async getActiveFsdCheckins(): Promise<FsdCheckin[]> {
+    return await db
+      .select()
+      .from(fsdCheckins)
+      .where(eq(fsdCheckins.status, "In"))
+      .orderBy(desc(fsdCheckins.checkinTime));
+  }
+
+  async getFsdCheckinById(id: number): Promise<FsdCheckin | undefined> {
+    const result = await db
+      .select()
+      .from(fsdCheckins)
+      .where(eq(fsdCheckins.id, id))
+      .limit(1);
+    return result[0];
   }
 }
 

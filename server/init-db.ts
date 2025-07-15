@@ -1,4 +1,3 @@
-
 import { storage } from './storage';
 
 export async function initializeDatabase() {
@@ -61,6 +60,17 @@ export async function initializeDatabase() {
         storeId: store.id,
       });
       console.log(`✅ Created gate operator: operator${store.id}/operator123`);
+
+       // Create FSD supervisor user
+       await storage.createUser({
+        username: `fsd${store.id}`,
+        password: "123",
+        name: `FSD Supervisor ${store.name}`,
+        email: `fsd${store.id}@metro.com`,
+        role: "fsd",
+        storeId: store.id,
+      });
+      console.log(`✅ Created FSD supervisor: fsd${store.id}/123`);
     }
 
     console.log('🎉 Database initialization completed successfully!');
@@ -70,6 +80,9 @@ export async function initializeDatabase() {
     console.log('   Gate Operator: operator1 / operator123');
     console.log('   Gate Operator: operator2 / operator123');
     console.log('   Gate Operator: operator3 / operator123');
+    console.log('   FSD Supervisor: fsd1 / 123');
+    console.log('   FSD Supervisor: fsd2 / 123');
+    console.log('   FSD Supervisor: fsd3 / 123');
 
   } catch (error) {
     console.error('❌ Database initialization failed:', error);

@@ -2,7 +2,7 @@ import { useAuth } from "@/lib/auth";
 import { useLocation } from "wouter";
 import { useEffect } from "react";
 
-export function useRequireAuth(requiredRole?: string) {
+export function useRequireAuth(requiredRole?: "admin" | "gate-operator" | "fsd") {
   const { user, isLoading } = useAuth();
   const [, setLocation] = useLocation();
 
