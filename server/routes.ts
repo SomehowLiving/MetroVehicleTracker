@@ -580,6 +580,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'attachment; filename="comprehensive_report.csv"',
         );
         res.send(csvData);
+      } else if (format === "excel") {
+        const excelData = generateComprehensiveExcel(comprehensiveData);
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader(
+          "Content-Disposition",
+          'attachment; filename="comprehensive_report.xlsx"',
+        );
+        res.send(excelData);
       } else {
         res.json(comprehensiveData);
       }
@@ -1230,10 +1238,195 @@ function generateCSV(data: any[]): string {
 }
 
 function generateExcel(data: any[]): Buffer {
-  // For now, return CSV format as a fallback
-  // In a production environment, you'd use a library like xlsx
-  const csvData = generateCSV(data);
-  return Buffer.from(csvData, 'utf8');
+  const XLSX = require('xlsx');
+  
+  if (data.length === 0) {
+    // Create empty workbook with headers
+    const worksheet = XLSX.utils.json_to_sheet([{
+      'Vehicle Number': '',
+      'Driver Name': '',
+      'Vendor Name': '',
+      'Store Name': '',
+      'Entry Time': '',
+      'Exit Time': '',
+      'Status': '',
+      'Opening KM': '',
+      'Closing KM': '',
+      'Duration (Hours)': ''
+    }]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Vehicle Report');
+    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  }
+
+  const excelData = data.map((checkin) => {
+    const entryTime = checkin.createdAt ? new Date(checkin.createdAt).toLocaleString() : "N/A";
+    const exitTime = checkin.closingKmTimestamp
+      ? new Date(checkin.closingKmTimestamp).toLocaleString()
+      : "Not yet";
+    const duration = checkin.closingKmTimestamp
+      ? Math.round(
+          ((new Date(checkin.closingKmTimestamp).getTime() -
+            new Date(checkin.createdAt).getTime()) /
+            (1000 * 60 * 60)) *
+            10,
+        ) / 10
+      : "Ongoing";
+
+    return {
+      'Vehicle Number': checkin.vehicleNumber || "N/A",
+      'Driver Name': checkin.driverName || "N/A",
+      'Vendor Name': checkin.vendorName || "N/A",
+      'Store Name': checkin.storeName || "N/A",
+      'Entry Time': entryTime,
+      'Exit Time': exitTime,
+      'Status': checkin.status || "Unknown",
+      'Opening KM': checkin.openingKm || 0,
+      'Closing KM': checkin.closingKm || "N/A",
+      'Duration (Hours)': duration,
+    };
+  });
+
+  const worksheet = XLSX.utils.json_to_sheet(excelData);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Vehicle Report');
+  
+  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+}
+
+function generateComprehensiveExcel(data: any): Buffer {
+  const XLSX = require('xlsx');
+  const workbook = XLSX.utils.book_new();
+
+  // Summary Sheet
+  const summaryData = [
+    ['Export Information'],
+    ['Generated At', data.exportInfo.generatedAt],
+    ['Date Range', `${data.exportInfo.dateRange.start} to ${data.exportInfo.dateRange.end}`],
+    ['Total Stores', data.exportInfo.totalStores],
+    [],
+    ['Summary'],
+    ['Total Vehicle Checkins', data.summary.totalVehicleCheckins],
+    ['Total FSD Checkins', data.summary.totalFsdCheckins],
+    ['Total Supervisor Checkins', data.summary.totalSupervisorCheckins],
+    ['Total Labour Checkins', data.summary.totalLabourCheckins],
+    ['Total Fraud Alerts', data.summary.totalFraudAlerts],
+  ];
+  const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
+  XLSX.utils.book_append_sheet(workbook, summaryWorksheet, 'Summary');
+
+  // Store Breakdown Sheet
+  const storeBreakdownData = [
+    ['Store ID', 'Store Name', 'Vehicle Checkins', 'FSD Checkins', 'Supervisor Checkins', 'Labour Checkins'],
+    ...data.summary.storeBreakdown.map((store: any) => [
+      store.storeId,
+      store.storeName,
+      store.vehicleCount,
+      store.fsdCount,
+      store.supervisorCount,
+      store.labourCount
+    ])
+  ];
+  const storeBreakdownWorksheet = XLSX.utils.aoa_to_sheet(storeBreakdownData);
+  XLSX.utils.book_append_sheet(workbook, storeBreakdownWorksheet, 'Store Breakdown');
+
+  // Vehicle Checkins Sheet
+  const vehicleCheckins = [];
+  data.stores.forEach((store: any) => {
+    store.vehicleCheckins.forEach((checkin: any) => {
+      vehicleCheckins.push({
+        'Store': store.name,
+        'Vehicle Number': checkin.vehicleNumber,
+        'Driver Name': checkin.driverName,
+        'Vendor': checkin.vendorName,
+        'Entry Time': new Date(checkin.createdAt).toLocaleString(),
+        'Exit Time': checkin.closingKmTimestamp ? new Date(checkin.closingKmTimestamp).toLocaleString() : 'Not yet',
+        'Status': checkin.status,
+        'Opening KM': checkin.openingKm || 0,
+        'Closing KM': checkin.closingKm || 0
+      });
+    });
+  });
+  if (vehicleCheckins.length > 0) {
+    const vehicleWorksheet = XLSX.utils.json_to_sheet(vehicleCheckins);
+    XLSX.utils.book_append_sheet(workbook, vehicleWorksheet, 'Vehicle Checkins');
+  }
+
+  // FSD Checkins Sheet
+  const fsdCheckins = [];
+  data.stores.forEach((store: any) => {
+    store.fsdCheckins.forEach((checkin: any) => {
+      fsdCheckins.push({
+        'Store': store.name,
+        'Name': checkin.name,
+        'Designation': checkin.designation,
+        'Checkin Time': new Date(checkin.checkinTime).toLocaleString(),
+        'Checkout Time': checkin.checkoutTime ? new Date(checkin.checkoutTime).toLocaleString() : 'Not yet',
+        'Status': checkin.status,
+        'Phone Number': checkin.phoneNumber || 'N/A'
+      });
+    });
+  });
+  if (fsdCheckins.length > 0) {
+    const fsdWorksheet = XLSX.utils.json_to_sheet(fsdCheckins);
+    XLSX.utils.book_append_sheet(workbook, fsdWorksheet, 'FSD Checkins');
+  }
+
+  // Supervisor Checkins Sheet
+  const supervisorCheckins = [];
+  data.stores.forEach((store: any) => {
+    store.supervisorCheckins.forEach((checkin: any) => {
+      supervisorCheckins.push({
+        'Store': store.name,
+        'Name': checkin.name,
+        'Checkin Time': new Date(checkin.checkinTime).toLocaleString(),
+        'Checkout Time': checkin.checkoutTime ? new Date(checkin.checkoutTime).toLocaleString() : 'Not yet',
+        'Status': checkin.status,
+        'Phone Number': checkin.phoneNumber || 'N/A',
+        'Aadhaar': checkin.aadhaarNumber ? `****-****-${checkin.aadhaarNumber.slice(-4)}` : 'N/A'
+      });
+    });
+  });
+  if (supervisorCheckins.length > 0) {
+    const supervisorWorksheet = XLSX.utils.json_to_sheet(supervisorCheckins);
+    XLSX.utils.book_append_sheet(workbook, supervisorWorksheet, 'Supervisor Checkins');
+  }
+
+  // Labour Checkins Sheet
+  const labourCheckins = [];
+  data.stores.forEach((store: any) => {
+    store.labourCheckins.forEach((checkin: any) => {
+      labourCheckins.push({
+        'Store': store.name,
+        'Name': checkin.name,
+        'Checkin Time': new Date(checkin.checkinTime).toLocaleString(),
+        'Checkout Time': checkin.checkoutTime ? new Date(checkin.checkoutTime).toLocaleString() : 'Not yet',
+        'Status': checkin.status,
+        'Phone Number': checkin.phoneNumber || 'N/A',
+        'Aadhaar': checkin.aadhaarNumber ? `****-****-${checkin.aadhaarNumber.slice(-4)}` : 'N/A'
+      });
+    });
+  });
+  if (labourCheckins.length > 0) {
+    const labourWorksheet = XLSX.utils.json_to_sheet(labourCheckins);
+    XLSX.utils.book_append_sheet(workbook, labourWorksheet, 'Labour Checkins');
+  }
+
+  // Fraud Logs Sheet
+  if (data.fraudLogs.length > 0) {
+    const fraudData = data.fraudLogs.map((fraud: any) => ({
+      'Fraud Type': fraud.fraudType,
+      'Description': fraud.description,
+      'Severity': fraud.severity,
+      'Created At': new Date(fraud.createdAt).toLocaleString(),
+      'Resolved': fraud.isResolved ? 'Yes' : 'No',
+      'Resolved At': fraud.resolvedAt ? new Date(fraud.resolvedAt).toLocaleString() : 'N/A'
+    }));
+    const fraudWorksheet = XLSX.utils.json_to_sheet(fraudData);
+    XLSX.utils.book_append_sheet(workbook, fraudWorksheet, 'Fraud Alerts');
+  }
+
+  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 }
 
 function generateComprehensiveCSV(data: any): string {

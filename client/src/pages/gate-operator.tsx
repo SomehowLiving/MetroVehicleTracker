@@ -6,7 +6,10 @@ import { Building, LogOut, User, Search, Download, Clock } from "lucide-react";
 import { useRequireAuth } from "@/hooks/use-auth";
 import { useAuth } from "@/lib/auth";
 import { useWebSocket } from "@/hooks/use-websocket";
-import VehicleForm from "@/components/vehicle-form";
+import { VehicleForm } from "@/components/vehicle-form";
+import { VehicleTable } from "@/components/vehicle-table";
+import { SupervisorCheckinForm } from "@/components/supervisor-checkin-form";
+import { LabourCheckinForm } from "@/components/labour-checkin-form";
 import { useEffect, useState } from "react";
 
 export default function GateOperator() {
@@ -82,7 +85,7 @@ export default function GateOperator() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           {/* Vehicle Entry Form */}
           <div className="lg:col-span-2">
             <VehicleForm storeId={user.storeId!} operatorId={user.id} />
@@ -164,6 +167,12 @@ export default function GateOperator() {
               </CardContent>
             </Card>
           </div>
+        </div>
+
+        {/* Supervisor and Labour Check-in Forms */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
+          <SupervisorCheckinForm storeId={user.storeId} operatorId={user.id} />
+          <LabourCheckinForm storeId={user.storeId} operatorId={user.id} />
         </div>
       </main>
     </div>
