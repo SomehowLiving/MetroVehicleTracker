@@ -10,7 +10,7 @@ import VehicleForm from "@/components/vehicle-form";
 import { useEffect, useState } from "react";
 
 export default function GateOperator() {
-  const { user } = useRequireAuth("gate_operator");
+  const { user } = useRequireAuth("gate-operator");
   const { logout } = useAuth();
   const { isConnected, lastMessage } = useWebSocket();
   const [refreshKey, setRefreshKey] = useState(0);

@@ -315,10 +315,11 @@ export function FraudDetectionDashboard({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Employee</TableHead>
+                  <TableHead>Vehicle/Driver</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>KM Reading</TableHead>
-                  <TableHead>Location</TableHead>
+                  <TableHead>Store Location</TableHead>
+                  <TableHead>Supervisor</TableHead>
                   <TableHead>Fraud Type</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
@@ -330,28 +331,39 @@ export function FraudDetectionDashboard({
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-gray-400" />
-                        <span className="font-medium">
-                          {checkin.employeeName}
-                        </span>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm">
+                            {checkin.vehicleNumber}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {checkin.driverName}
+                          </span>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-gray-400" />
                         <span className="text-sm">
-                          {new Date(checkin.checkinDate).toLocaleDateString()}
+                          {new Date(checkin.createdAt).toLocaleDateString()}
                         </span>
                       </div>
                     </TableCell>
                     <TableCell>
-                      <span className="font-mono text-sm">
-                        {checkin.kmReading}
-                      </span>
+                      <div className="font-mono text-sm">
+                        <div>Open: {checkin.openingKm || 'N/A'}</div>
+                        <div>Close: {checkin.closingKm || 'N/A'}</div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <MapPin className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm">{checkin.location}</span>
+                        <span className="text-sm">{checkin.storeName}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        {checkin.supervisorName || 'N/A'}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -362,13 +374,13 @@ export function FraudDetectionDashboard({
                     <TableCell>
                       <Badge
                         variant={
-                          checkin.status === "resolved"
+                          checkin.isResolved
                             ? "default"
                             : "destructive"
                         }
                         className="text-xs"
                       >
-                        {checkin.status}
+                        {checkin.isResolved ? "Resolved" : "Active"}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -376,7 +388,7 @@ export function FraudDetectionDashboard({
                         <Button variant="outline" size="sm">
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {checkin.status !== "resolved" && (
+                        {!checkin.isResolved && (
                           <Button variant="outline" size="sm">
                             <CheckCircle className="h-4 w-4" />
                           </Button>

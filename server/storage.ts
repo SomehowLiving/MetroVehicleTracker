@@ -146,6 +146,7 @@ export interface IStorage {
     unresolvedAlerts: number;
     fraudByType: Array<{ type: string; count: number; severity: string }>;
   }>;
+    getFraudulentCheckinsWithDetails(storeId?: number, limit?: number): Promise<any[]>;
 
   // Dashboard queries
   getTodaysCheckinsCount(storeId?: number): Promise<number>;
@@ -632,6 +633,45 @@ export class PostgresStorage implements IStorage {
     }
 
     return { checkin: createdCheckin, fraudChecks };
+  }
+
+  async getFraudulentCheckinsWithDetails(storeId?: number, limit: number = 50): Promise<any[]> {
+    const conditions = [
+      eq(fraudLogs.isResolved, false)
+    ];
+
+    if (storeId) {
+      conditions.push(eq(checkins.storeId, storeId));
+    }
+
+    const result = await db
+      .select({
+        id: checkins.id,
+        vehicleNumber: checkins.vehicleNumber,
+        driverName: checkins.driverName,
+        storeName: stores.name, // Changed to stores.name
+        openingKm: checkins.openingKm,
+        closingKm: checkins.closingKm,
+        fraudType: fraudLogs.fraudType,
+        description: fraudLogs.description,
+        severity: fraudLogs.severity,
+        createdAt: checkins.createdAt,
+        isResolved: fraudLogs.isResolved,
+        supervisorName: vendorSupervisors.name,
+      })
+      .from(checkins)
+      .innerJoin(fraudLogs, eq(fraudLogs.checkinId, checkins.id))
+      .leftJoin(vendorSupervisors, and(
+        eq(vendorSupervisors.vendorId, checkins.vendorId),
+        eq(vendorSupervisors.storeId, checkins.storeId),
+        eq(vendorSupervisors.isActive, true)
+      ))
+      .innerJoin(stores, eq(stores.id, checkins.storeId)) // Join with stores table
+      .where(and(...conditions))
+      .orderBy(desc(checkins.createdAt))
+      .limit(limit);
+
+      return result;
   }
 
   // Dashboard methods

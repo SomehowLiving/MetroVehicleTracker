@@ -323,6 +323,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/dashboard/kpis-yesterday", async (req, res) => {
+    try {
+      const { storeId } = req.query;
+      const storeIdNum = storeId ? parseInt(storeId as string) : undefined;
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      yesterday.setHours(0, 0, 0, 0);
+      const todayStart = new Date(yesterday);
+      todayStart.setDate(todayStart.getDate() + 1);
+
+      const yesterdayCheckins = await storage.getCheckinsByDateRange(
+        yesterday,
+        todayStart,
+        storeIdNum,
+      );
+
+      const averageStayHours = yesterdayCheckins.length > 0
+        ? yesterdayCheckins.reduce((sum, checkin) => {
+            if (checkin.closingKmTimestamp && checkin.createdAt) {
+              const hours = (checkin.closingKmTimestamp.getTime() - checkin.createdAt.getTime()) / (1000 * 60 * 60);
+              return sum + hours;
+            }
+            return sum;
+          }, 0) / yesterdayCheckins.filter(c => c.closingKmTimestamp).length
+        : 0;
+
+      res.json({
+        todaysCheckins: yesterdayCheckins.length,
+        averageStayHours: Math.round(averageStayHours * 10) / 10,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Error fetching yesterday KPIs" });
+    }
+  });
+
   app.get("/api/dashboard/active-vehicles", async (req, res) => {
     try {
       const { storeId } = req.query;
@@ -514,7 +550,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { storeId, limit = 50 } = req.query;
       const storeIdNum = storeId ? parseInt(storeId as string) : undefined;
 
-      const fraudulentCheckins = await storage.getFraudulentCheckins(
+      const fraudulentCheckins = await storage.getFraudulentCheckinsWithDetails(
         storeIdNum,
         parseInt(limit as string),
       );

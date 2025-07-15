@@ -31,7 +31,7 @@ export function VehicleTable({ refreshKey }: VehicleTableProps) {
     search: "",
   });
 
-  const { data: activeVehicles, isLoading } = useQuery({
+  const { data: vehicles, isLoading } = useQuery({
     queryKey: ["/api/dashboard/active-vehicles", refreshKey],
   });
 
@@ -39,7 +39,7 @@ export function VehicleTable({ refreshKey }: VehicleTableProps) {
     queryKey: ["/api/stores"],
   });
 
-  const filteredVehicles = activeVehicles?.filter((vehicle: any) => {
+  const filteredVehicles = vehicles?.filter((vehicle: any) => {
     const matchesStore =
       !filters.store ||
       filters.store === "all" ||

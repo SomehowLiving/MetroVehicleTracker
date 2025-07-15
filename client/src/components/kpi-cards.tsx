@@ -11,11 +11,24 @@ export function KPICards({ refreshKey }: KPICardsProps) {
     queryKey: ["/api/dashboard/kpis", refreshKey],
   });
 
+  const { data: yesterdayKpis } = useQuery({
+    queryKey: ["/api/dashboard/kpis-yesterday", refreshKey],
+  });
+
+  // Calculate percentage changes
+  const checkinChange = yesterdayKpis?.todaysCheckins 
+    ? Math.round(((kpis?.todaysCheckins || 0) - yesterdayKpis.todaysCheckins) / yesterdayKpis.todaysCheckins * 100)
+    : 0;
+
+  const avgStayChange = yesterdayKpis?.averageStayHours 
+    ? Math.round(((kpis?.averageStayHours || 0) - yesterdayKpis.averageStayHours) * 60)
+    : 0;
+
   const kpiData = [
     {
       title: "Total Check-ins Today",
       value: kpis?.todaysCheckins || 0,
-      change: "+12% from yesterday",
+      change: checkinChange > 0 ? `+${checkinChange}% from yesterday` : checkinChange < 0 ? `${checkinChange}% from yesterday` : "No change",
       icon: TrendingUp,
       color: "text-success",
       bgColor: "bg-success/10",
@@ -31,7 +44,7 @@ export function KPICards({ refreshKey }: KPICardsProps) {
     {
       title: "Average Stay Time",
       value: `${kpis?.averageStayHours || 0}h`,
-      change: "-15 min from avg",
+      change: avgStayChange > 0 ? `+${avgStayChange} min from avg` : avgStayChange < 0 ? `${avgStayChange} min from avg` : "No change",
       icon: Clock,
       color: "text-metro-blue",
       bgColor: "bg-metro-blue/10",
@@ -39,7 +52,7 @@ export function KPICards({ refreshKey }: KPICardsProps) {
     {
       title: "Extended Stays",
       value: kpis?.extendedStays || 0,
-      change: "Requires attention",
+      change: kpis?.extendedStays > 0 ? "Requires attention" : "All good",
       icon: AlertTriangle,
       color: "text-error",
       bgColor: "bg-error/10",

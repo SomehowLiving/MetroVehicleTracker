@@ -19,7 +19,7 @@ export default function Login() {
   const togglePasswordVisibility = () => setShowPassword(!showPassword);
   // Get role from URL params
   const urlParams = new URLSearchParams(window.location.search);
-  const role = urlParams.get("role") || "gate_operator";
+  const role = urlParams.get("role") || "gate-operator";
   const storeId = urlParams.get("storeId");
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -121,10 +121,10 @@ export default function Login() {
               </Button>
             </div>
 
-            {role === "gate_operator" && (
+            {role === "gate-operator" && (
               <div className="text-center text-sm text-gray-600">
                 <p>Demo credentials:</p>
-                <p>Username: operator1, Password: operator123</p>
+                <p>Username: op11, Password: 123</p>
               </div>
             )}
 
