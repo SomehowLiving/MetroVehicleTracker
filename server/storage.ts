@@ -12,6 +12,8 @@ import {
   vendorSupervisors,
   fraudLogs,
   fsdCheckins,
+  supervisorCheckins,
+  labourCheckins,
   type Store,
   type User,
   type Vendor,
@@ -22,6 +24,8 @@ import {
   type VendorSupervisor,
   type FraudLog,
   type FsdCheckin,
+  type SupervisorCheckin,
+  type LabourCheckin,
   type InsertStore,
   type InsertUser,
   type InsertVendor,
@@ -32,6 +36,8 @@ import {
   type InsertVendorSupervisor,
   type InsertFraudLog,
   type InsertFsdCheckin,
+  type InsertSupervisorCheckin,
+  type InsertLabourCheckin,
   type FraudCheck,
 } from "@shared/schema";
 
@@ -165,6 +171,20 @@ export interface IStorage {
   getFsdCheckinsByStore(storeId: number): Promise<any[]>;
   getActiveFsdCheckins(): Promise<any[]>;
   getFsdCheckinById(id: number): Promise<any | undefined>;
+
+  // Supervisor Checkin methods
+  createSupervisorCheckin(checkin: InsertSupervisorCheckin): Promise<SupervisorCheckin>;
+  updateSupervisorCheckin(id: number, updates: Partial<SupervisorCheckin>): Promise<SupervisorCheckin>;
+  getSupervisorCheckinsByStore(storeId: number): Promise<SupervisorCheckin[]>;
+  getActiveSupervisorCheckins(storeId?: number): Promise<SupervisorCheckin[]>;
+  getSupervisorCheckinById(id: number): Promise<SupervisorCheckin | undefined>;
+
+  // Labour Checkin methods  
+  createLabourCheckin(checkin: InsertLabourCheckin): Promise<LabourCheckin>;
+  updateLabourCheckin(id: number, updates: Partial<LabourCheckin>): Promise<LabourCheckin>;
+  getLabourCheckinsByStore(storeId: number): Promise<LabourCheckin[]>;
+  getActiveLabourCheckins(storeId?: number): Promise<LabourCheckin[]>;
+  getLabourCheckinById(id: number): Promise<LabourCheckin | undefined>;
 }
 
 export class PostgresStorage implements IStorage {
@@ -857,6 +877,104 @@ export class PostgresStorage implements IStorage {
       .select()
       .from(fsdCheckins)
       .where(eq(fsdCheckins.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  // Supervisor Checkin methods
+  async createSupervisorCheckin(checkin: InsertSupervisorCheckin): Promise<SupervisorCheckin> {
+    const result = await db.insert(supervisorCheckins).values(checkin).returning();
+    return result[0];
+  }
+
+  async updateSupervisorCheckin(id: number, updates: Partial<SupervisorCheckin>): Promise<SupervisorCheckin> {
+    const result = await db
+      .update(supervisorCheckins)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(supervisorCheckins.id, id))
+      .returning();
+
+    if (!result[0]) {
+      throw new Error(`Supervisor checkin with id ${id} not found`);
+    }
+    return result[0];
+  }
+
+  async getSupervisorCheckinsByStore(storeId: number): Promise<SupervisorCheckin[]> {
+    return await db
+      .select()
+      .from(supervisorCheckins)
+      .where(eq(supervisorCheckins.storeId, storeId))
+      .orderBy(desc(supervisorCheckins.createdAt));
+  }
+
+  async getActiveSupervisorCheckins(storeId?: number): Promise<SupervisorCheckin[]> {
+    const conditions = [eq(supervisorCheckins.status, "In")];
+    if (storeId) {
+      conditions.push(eq(supervisorCheckins.storeId, storeId));
+    }
+    
+    return await db
+      .select()
+      .from(supervisorCheckins)
+      .where(and(...conditions))
+      .orderBy(desc(supervisorCheckins.checkinTime));
+  }
+
+  async getSupervisorCheckinById(id: number): Promise<SupervisorCheckin | undefined> {
+    const result = await db
+      .select()
+      .from(supervisorCheckins)
+      .where(eq(supervisorCheckins.id, id))
+      .limit(1);
+    return result[0];
+  }
+
+  // Labour Checkin methods
+  async createLabourCheckin(checkin: InsertLabourCheckin): Promise<LabourCheckin> {
+    const result = await db.insert(labourCheckins).values(checkin).returning();
+    return result[0];
+  }
+
+  async updateLabourCheckin(id: number, updates: Partial<LabourCheckin>): Promise<LabourCheckin> {
+    const result = await db
+      .update(labourCheckins)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(labourCheckins.id, id))
+      .returning();
+
+    if (!result[0]) {
+      throw new Error(`Labour checkin with id ${id} not found`);
+    }
+    return result[0];
+  }
+
+  async getLabourCheckinsByStore(storeId: number): Promise<LabourCheckin[]> {
+    return await db
+      .select()
+      .from(labourCheckins)
+      .where(eq(labourCheckins.storeId, storeId))
+      .orderBy(desc(labourCheckins.createdAt));
+  }
+
+  async getActiveLabourCheckins(storeId?: number): Promise<LabourCheckin[]> {
+    const conditions = [eq(labourCheckins.status, "In")];
+    if (storeId) {
+      conditions.push(eq(labourCheckins.storeId, storeId));
+    }
+    
+    return await db
+      .select()
+      .from(labourCheckins)
+      .where(and(...conditions))
+      .orderBy(desc(labourCheckins.checkinTime));
+  }
+
+  async getLabourCheckinById(id: number): Promise<LabourCheckin | undefined> {
+    const result = await db
+      .select()
+      .from(labourCheckins)
+      .where(eq(labourCheckins.id, id))
       .limit(1);
     return result[0];
   }

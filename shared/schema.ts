@@ -208,6 +208,54 @@ export const fsdCheckins = pgTable("fsd_checkins", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Supervisor check-ins/check-outs
+export const supervisorCheckins = pgTable("supervisor_checkins", {
+  id: serial("id").primaryKey(),
+  supervisorId: integer("supervisor_id")
+    .references(() => vendorSupervisors.id)
+    .notNull(),
+  storeId: integer("store_id")
+    .references(() => stores.id)
+    .notNull(),
+  vendorId: integer("vendor_id")
+    .references(() => vendors.id)
+    .notNull(),
+  checkinTime: timestamp("checkin_time").defaultNow(),
+  checkoutTime: timestamp("checkout_time"),
+  status: varchar("status", { length: 20 }).notNull().default("In"), // 'In' | 'Out'
+  name: varchar("name", { length: 255 }).notNull(),
+  aadhaarNumber: varchar("aadhaar_number", { length: 12 }),
+  phoneNumber: varchar("phone_number", { length: 20 }),
+  photoUrl: varchar("photo_url", { length: 500 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Labour check-ins/check-outs
+export const labourCheckins = pgTable("labour_checkins", {
+  id: serial("id").primaryKey(),
+  loaderId: integer("loader_id")
+    .references(() => vendorLoaders.id)
+    .notNull(),
+  storeId: integer("store_id")
+    .references(() => stores.id)
+    .notNull(),
+  vendorId: integer("vendor_id")
+    .references(() => vendors.id)
+    .notNull(),
+  checkinTime: timestamp("checkin_time").defaultNow(),
+  checkoutTime: timestamp("checkout_time"),
+  status: varchar("status", { length: 20 }).notNull().default("In"), // 'In' | 'Out'
+  name: varchar("name", { length: 255 }).notNull(),
+  aadhaarNumber: varchar("aadhaar_number", { length: 12 }),
+  phoneNumber: varchar("phone_number", { length: 20 }),
+  photoUrl: varchar("photo_url", { length: 500 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 /* ============================ ZOD VALIDATION SCHEMAS ============================ */
 
 // Basic insert schemas used in backend services
@@ -251,6 +299,18 @@ export const insertFsdCheckinSchema = createInsertSchema(fsdCheckins).omit({
   updatedAt: true,
 });
 
+export const insertSupervisorCheckinSchema = createInsertSchema(supervisorCheckins).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertLabourCheckinSchema = createInsertSchema(labourCheckins).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // FSD form validation
 export const fsdFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -264,6 +324,42 @@ export const fsdFormSchema = z.object({
     .string()
     .optional()
     .refine((val) => !val || /^[0-9]{10}$/.test(val), "Must be 10 digits"),
+});
+
+// Supervisor check-in form validation
+export const supervisorCheckinSchema = z.object({
+  supervisorId: z.coerce.number().min(1, "Supervisor is required"),
+  storeId: z.coerce.number().min(1, "Store is required"),
+  vendorId: z.coerce.number().min(1, "Vendor is required"),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  aadhaarNumber: z
+    .string()
+    .length(12, "Must be exactly 12 digits")
+    .regex(/^[0-9]{12}$/, "Digits only")
+    .optional(),
+  phoneNumber: z
+    .string()
+    .optional()
+    .refine((val) => !val || /^[0-9]{10}$/.test(val), "Must be 10 digits"),
+  notes: z.string().optional(),
+});
+
+// Labour check-in form validation
+export const labourCheckinSchema = z.object({
+  loaderId: z.coerce.number().min(1, "Loader is required"),
+  storeId: z.coerce.number().min(1, "Store is required"),
+  vendorId: z.coerce.number().min(1, "Vendor is required"),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  aadhaarNumber: z
+    .string()
+    .length(12, "Must be exactly 12 digits")
+    .regex(/^[0-9]{12}$/, "Digits only")
+    .optional(),
+  phoneNumber: z
+    .string()
+    .optional()
+    .refine((val) => !val || /^[0-9]{10}$/.test(val), "Must be 10 digits"),
+  notes: z.string().optional(),
 });
 
 // UPDATED: More comprehensive vehicle entry schema
@@ -435,6 +531,8 @@ export type VendorSupervisor = typeof vendorSupervisors.$inferSelect;
 export type FraudLog = typeof fraudLogs.$inferSelect;
 export type CheckinLoader = typeof checkinLoaders.$inferSelect;
 export type FsdCheckin = typeof fsdCheckins.$inferSelect;
+export type SupervisorCheckin = typeof supervisorCheckins.$inferSelect;
+export type LabourCheckin = typeof labourCheckins.$inferSelect;
 
 // Insert types for creating records
 export type InsertStore = z.infer<typeof insertStoreSchema>;
@@ -450,12 +548,16 @@ export type InsertVendorSupervisor = z.infer<
 export type InsertFraudLog = z.infer<typeof insertFraudLogSchema>;
 export type InsertCheckinLoader = z.infer<typeof insertCheckinLoaderSchema>;
 export type InsertFsdCheckin = z.infer<typeof insertFsdCheckinSchema>;
+export type InsertSupervisorCheckin = z.infer<typeof insertSupervisorCheckinSchema>;
+export type InsertLabourCheckin = z.infer<typeof insertLabourCheckinSchema>;
 
 // Types for form validation on frontend
 export type VehicleFormData = z.infer<typeof vehicleFormSchema>;
 export type SupervisorFormData = z.infer<typeof supervisorFormSchema>;
 export type LoaderFormData = z.infer<typeof loaderFormSchema>;
 export type FsdFormData = z.infer<typeof fsdFormSchema>;
+export type SupervisorCheckinData = z.infer<typeof supervisorCheckinSchema>;
+export type LabourCheckinData = z.infer<typeof labourCheckinSchema>;
 
 // Types for API request payloads
 export type VehicleEntryData = z.infer<typeof vehicleEntrySchema>;

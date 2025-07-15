@@ -11,6 +11,8 @@ import {
   insertVehicleSchema,
   insertCheckinSchema,
   insertManpowerSchema,
+  supervisorCheckinSchema,
+  labourCheckinSchema,
 } from "@shared/schema";
 
 let wsService: WebSocketService;
@@ -895,6 +897,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching FSD checkins:", error);
       res.status(500).json({ message: "Error fetching FSD checkins" });
+    }
+  });
+
+  // Supervisor check-in/check-out routes
+  app.post("/api/supervisor/checkin", async (req, res) => {
+    try {
+      const checkinData = supervisorCheckinSchema.parse(req.body);
+      
+      // Check if supervisor is already checked in
+      const activeSupervisorCheckins = await storage.getActiveSupervisorCheckins();
+      const existingCheckin = activeSupervisorCheckins.find(
+        (c) => c.supervisorId === checkinData.supervisorId && c.storeId === checkinData.storeId
+      );
+
+      if (existingCheckin) {
+        return res.status(400).json({ message: "Supervisor is already checked in" });
+      }
+
+      const checkin = await storage.createSupervisorCheckin({
+        ...checkinData,
+        status: "In",
+        checkinTime: new Date(),
+      });
+
+      // Broadcast real-time update
+      wsService.broadcastToAll({
+        type: 'supervisor_checkin',
+        data: checkin
+      });
+
+      res.json(checkin);
+    } catch (error) {
+      console.error("Supervisor checkin error:", error);
+      res.status(500).json({ message: "Error creating supervisor checkin" });
+    }
+  });
+
+  app.post("/api/supervisor/checkout", async (req, res) => {
+    try {
+      const { checkinId } = req.body;
+
+      const checkin = await storage.getSupervisorCheckinById(checkinId);
+      if (!checkin) {
+        return res.status(404).json({ message: "Supervisor checkin not found" });
+      }
+
+      if (checkin.status !== "In") {
+        return res.status(400).json({ message: "Supervisor is not checked in" });
+      }
+
+      const updatedCheckin = await storage.updateSupervisorCheckin(checkinId, {
+        status: "Out",
+        checkoutTime: new Date(),
+      });
+
+      // Broadcast real-time update
+      wsService.broadcastToAll({
+        type: 'supervisor_checkout',
+        data: updatedCheckin
+      });
+
+      res.json(updatedCheckin);
+    } catch (error) {
+      console.error("Supervisor checkout error:", error);
+      res.status(500).json({ message: "Error processing supervisor checkout" });
+    }
+  });
+
+  app.get("/api/supervisor/checkins", async (req, res) => {
+    try {
+      const { storeId } = req.query;
+      
+      if (storeId) {
+        const checkins = await storage.getSupervisorCheckinsByStore(parseInt(storeId as string));
+        res.json(checkins);
+      } else {
+        const activeCheckins = await storage.getActiveSupervisorCheckins();
+        res.json(activeCheckins);
+      }
+    } catch (error) {
+      console.error("Error fetching supervisor checkins:", error);
+      res.status(500).json({ message: "Error fetching supervisor checkins" });
+    }
+  });
+
+  // Labour check-in/check-out routes
+  app.post("/api/labour/checkin", async (req, res) => {
+    try {
+      const checkinData = labourCheckinSchema.parse(req.body);
+      
+      // Check if labour is already checked in
+      const activeLabourCheckins = await storage.getActiveLabourCheckins();
+      const existingCheckin = activeLabourCheckins.find(
+        (c) => c.loaderId === checkinData.loaderId && c.storeId === checkinData.storeId
+      );
+
+      if (existingCheckin) {
+        return res.status(400).json({ message: "Labour is already checked in" });
+      }
+
+      const checkin = await storage.createLabourCheckin({
+        ...checkinData,
+        status: "In",
+        checkinTime: new Date(),
+      });
+
+      // Broadcast real-time update
+      wsService.broadcastToAll({
+        type: 'labour_checkin',
+        data: checkin
+      });
+
+      res.json(checkin);
+    } catch (error) {
+      console.error("Labour checkin error:", error);
+      res.status(500).json({ message: "Error creating labour checkin" });
+    }
+  });
+
+  app.post("/api/labour/checkout", async (req, res) => {
+    try {
+      const { checkinId } = req.body;
+
+      const checkin = await storage.getLabourCheckinById(checkinId);
+      if (!checkin) {
+        return res.status(404).json({ message: "Labour checkin not found" });
+      }
+
+      if (checkin.status !== "In") {
+        return res.status(400).json({ message: "Labour is not checked in" });
+      }
+
+      const updatedCheckin = await storage.updateLabourCheckin(checkinId, {
+        status: "Out",
+        checkoutTime: new Date(),
+      });
+
+      // Broadcast real-time update
+      wsService.broadcastToAll({
+        type: 'labour_checkout',
+        data: updatedCheckin
+      });
+
+      res.json(updatedCheckin);
+    } catch (error) {
+      console.error("Labour checkout error:", error);
+      res.status(500).json({ message: "Error processing labour checkout" });
+    }
+  });
+
+  app.get("/api/labour/checkins", async (req, res) => {
+    try {
+      const { storeId } = req.query;
+      
+      if (storeId) {
+        const checkins = await storage.getLabourCheckinsByStore(parseInt(storeId as string));
+        res.json(checkins);
+      } else {
+        const activeCheckins = await storage.getActiveLabourCheckins();
+        res.json(activeCheckins);
+      }
+    } catch (error) {
+      console.error("Error fetching labour checkins:", error);
+      res.status(500).json({ message: "Error fetching labour checkins" });
     }
   });
 

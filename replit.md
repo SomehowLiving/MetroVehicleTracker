@@ -10,6 +10,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### July 2025 - Supervisor and Labour Check-in/Check-out System Implemented
+- Fixed missing FSD users in database - created 32 FSD users for all stores
+- Added comprehensive supervisor and labour check-in/check-out functionality:
+  - New database tables: supervisor_checkins, labour_checkins
+  - Real-time check-in/check-out tracking with timestamps
+  - No opening/closing kilometer requirements (as requested)
+  - WebSocket real-time updates for all check-in/check-out events
+  - Complete API endpoints for both supervisor and labour management
+- Updated schema with new tables and validation schemas
+- Enhanced storage interface with supervisor and labour methods
+- All endpoints tested and working correctly
+
 ### July 2025 - Replit Migration Completed
 - Successfully migrated project from Replit Agent to Replit environment
 - PostgreSQL database connected and seeded with test data
