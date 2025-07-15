@@ -27,30 +27,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.post("/api/auth/login", async (req, res) => {
     try {
-      console.log('🔐 Login attempt:', { body: req.body });
-      
+      console.log("🔐 Login attempt:", { body: req.body });
+
       const { username, password, role } = loginSchema.parse(req.body);
-      console.log('✅ Schema validation passed:', { username, role });
+      console.log("✅ Schema validation passed:", { username, role });
 
       const user = await storage.getUserByUsername(username);
-      console.log('🔍 User lookup result:', user ? 'Found' : 'Not found');
-      
+      console.log("🔍 User lookup result:", user ? "Found" : "Not found");
+
       if (!user) {
-        console.log('❌ User not found:', username);
+        console.log("❌ User not found:", username);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
       if (user.password !== password) {
-        console.log('❌ Password mismatch for user:', username);
+        console.log("❌ Password mismatch for user:", username);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
       if (user.role !== role) {
-        console.log('❌ Role mismatch for user:', username, 'Expected:', role, 'Actual:', user.role);
+        console.log(
+          "❌ Role mismatch for user:",
+          username,
+          "Expected:",
+          role,
+          "Actual:",
+          user.role,
+        );
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
-      console.log('✅ Login successful for user:', username);
+      console.log("✅ Login successful for user:", username);
 
       // In production, use proper JWT tokens
       const token = Buffer.from(
@@ -72,10 +79,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         token,
       });
     } catch (error) {
-      console.error('❌ Login error:', error);
-      res.status(400).json({ 
+      console.error("❌ Login error:", error);
+      res.status(400).json({
         message: "Invalid request data",
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   });
@@ -87,12 +95,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Store routes
   app.get("/api/stores", async (req, res) => {
     try {
-      console.log('📍 Fetching stores...');
+      console.log("📍 Fetching stores...");
       const stores = await storage.getAllStores();
       console.log(`✅ Found ${stores.length} stores`);
-      
+
       const storeVehicleCounts = await storage.getStoreVehicleCounts();
-      console.log(`✅ Got vehicle counts for ${storeVehicleCounts.length} stores`);
+      console.log(
+        `✅ Got vehicle counts for ${storeVehicleCounts.length} stores`,
+      );
 
       const storesWithCounts = stores.map((store) => {
         const count = storeVehicleCounts.find((c) => c.storeId === store.id);
@@ -105,10 +115,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(storesWithCounts);
     } catch (error) {
-      console.error('❌ Error fetching stores:', error);
-      res.status(500).json({ 
+      console.error("❌ Error fetching stores:", error);
+      res.status(500).json({
         message: "Error fetching stores",
-        error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        error:
+          process.env.NODE_ENV === "development" ? error.message : undefined,
       });
     }
   });
@@ -393,7 +404,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: error.message,
       });
     }
-  });``
+  });
+  ``;
 
   // Export routes
   app.post("/api/export/csv", async (req, res) => {
@@ -475,7 +487,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { storeId } = req.query;
       const storeIdNum = storeId ? parseInt(storeId as string) : undefined;
-      
+
       const fraudStats = await storage.getFraudStats(storeIdNum);
       res.json(fraudStats);
     } catch (error) {
@@ -487,7 +499,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/fraud/alerts", async (req, res) => {
     try {
       const { hours = 24 } = req.query;
-      const alerts = await storage.getRecentFraudAlerts(parseInt(hours as string));
+      const alerts = await storage.getRecentFraudAlerts(
+        parseInt(hours as string),
+      );
       res.json(alerts);
     } catch (error) {
       console.error("Error fetching fraud alerts:", error);
@@ -499,8 +513,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { storeId, limit = 50 } = req.query;
       const storeIdNum = storeId ? parseInt(storeId as string) : undefined;
-      
-      const fraudulentCheckins = await storage.getFraudulentCheckins(storeIdNum, parseInt(limit as string));
+
+      const fraudulentCheckins = await storage.getFraudulentCheckins(
+        storeIdNum,
+        parseInt(limit as string),
+      );
       res.json(fraudulentCheckins);
     } catch (error) {
       console.error("Error fetching fraudulent checkins:", error);
@@ -512,7 +529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const alertId = parseInt(req.params.id);
       const { resolvedBy = 1 } = req.body; // Default admin user
-      
+
       await storage.resolveFraudAlert(alertId, resolvedBy);
       res.json({ message: "Alert resolved successfully" });
     } catch (error) {
@@ -537,10 +554,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const vehicleId = parseInt(req.params.vehicleId);
       const loaderData = req.body;
-      
+
       const loader = await storage.createVehicleLoader({
         vehicleId,
-        ...loaderData
+        ...loaderData,
       });
       res.json(loader);
     } catch (error) {
@@ -550,40 +567,233 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Vendor Supervisors Routes
-  app.get("/api/vendors/:vendorId/stores/:storeId/supervisors", async (req, res) => {
+  app.get(
+    "/api/vendors/:vendorId/stores/:storeId/supervisors",
+    async (req, res) => {
+      try {
+        const vendorId = parseInt(req.params.vendorId);
+        const storeId = parseInt(req.params.storeId);
+
+        const supervisors = await storage.getVendorSupervisors(
+          vendorId,
+          storeId,
+        );
+        res.json(supervisors);
+      } catch (error) {
+        console.error("Error fetching vendor supervisors:", error);
+        res.status(500).json({ message: "Error fetching vendor supervisors" });
+      }
+    },
+  );
+
+  app.post(
+    "/api/vendors/:vendorId/stores/:storeId/supervisors",
+    async (req, res) => {
+      try {
+        const vendorId = parseInt(req.params.vendorId);
+        const storeId = parseInt(req.params.storeId);
+        const supervisorData = req.body;
+
+        const supervisor = await storage.createVendorSupervisor({
+          vendorId,
+          storeId,
+          ...supervisorData,
+        });
+        res.json(supervisor);
+      } catch (error) {
+        console.error("Error creating vendor supervisor:", error);
+        res.status(500).json({ message: "Error creating vendor supervisor" });
+      }
+    },
+  );
+
+  //---------------------additional-----------------------------
+  // Supervisor routes
+  app.post("/api/supervisors", async (req, res) => {
     try {
-      const vendorId = parseInt(req.params.vendorId);
-      const storeId = parseInt(req.params.storeId);
-      
-      const supervisors = await storage.getVendorSupervisors(vendorId, storeId);
-      res.json(supervisors);
+      const supervisorData = supervisorEntrySchema.parse(req.body);
+
+      // Check for duplicate Aadhaar number
+      const existingSupervisor = await storage.getVendorSupervisorByAadhaar(
+        supervisorData.aadhaarNumber,
+      );
+
+      if (existingSupervisor) {
+        return res.status(400).json({
+          message: "Supervisor with this Aadhaar number already exists",
+        });
+      }
+
+      // Validate vendor and store exist
+      const vendor = await storage.getVendorById(supervisorData.vendorId);
+      const store = await storage.getStoreById(supervisorData.storeId);
+
+      if (!vendor) {
+        return res.status(400).json({ message: "Invalid vendor" });
+      }
+      if (!store) {
+        return res.status(400).json({ message: "Invalid store" });
+      }
+
+      // Create supervisor record
+      const supervisor = await storage.createVendorSupervisor({
+        vendorId: supervisorData.vendorId,
+        storeId: supervisorData.storeId,
+        name: supervisorData.name,
+        aadhaarNumber: supervisorData.aadhaarNumber,
+        phoneNumber: supervisorData.phoneNumber || null,
+        photoUrl: supervisorData.photoUrl || null,
+      });
+
+      // Notify via WebSocket if needed
+      wsService.notifySupervisorAdded?.(supervisor);
+
+      res.json(supervisor);
     } catch (error) {
-      console.error("Error fetching vendor supervisors:", error);
-      res.status(500).json({ message: "Error fetching vendor supervisors" });
+      console.error("Supervisor creation error:", error);
+      if (error.name === "ZodError") {
+        return res.status(400).json({
+          message: "Invalid input data",
+          errors: error.errors,
+        });
+      }
+      res.status(500).json({ message: "Error creating supervisor" });
     }
   });
 
-  app.post("/api/vendors/:vendorId/stores/:storeId/supervisors", async (req, res) => {
+  app.get("/api/supervisors", async (req, res) => {
     try {
-      const vendorId = parseInt(req.params.vendorId);
-      const storeId = parseInt(req.params.storeId);
-      const supervisorData = req.body;
-      
-      const supervisor = await storage.createVendorSupervisor({
-        vendorId,
-        storeId,
-        ...supervisorData
-      });
+      const { vendorId, storeId } = req.query;
+
+      // If no filters provided, return empty array or all supervisors
+      if (!vendorId && !storeId) {
+        return res.json([]);
+      }
+
+      let supervisors;
+
+      if (vendorId && storeId) {
+        // Get supervisors for specific vendor and store
+        supervisors = await storage.getVendorSupervisors(
+          parseInt(vendorId as string),
+          parseInt(storeId as string),
+        );
+      } else {
+        // You might want to implement these methods in storage.ts
+        // For now, return empty array
+        supervisors = [];
+      }
+
+      res.json(supervisors);
+    } catch (error) {
+      console.error("Error fetching supervisors:", error);
+      res.status(500).json({ message: "Error fetching supervisors" });
+    }
+  });
+
+  app.get("/api/supervisors/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // You'll need to implement this method in storage.ts
+      const supervisor = await storage.getVendorSupervisorById(parseInt(id));
+
+      if (!supervisor) {
+        return res.status(404).json({ message: "Supervisor not found" });
+      }
+
       res.json(supervisor);
     } catch (error) {
-      console.error("Error creating vendor supervisor:", error);
-      res.status(500).json({ message: "Error creating vendor supervisor" });
+      console.error("Error fetching supervisor:", error);
+      res.status(500).json({ message: "Error fetching supervisor" });
+    }
+  });
+
+  app.put("/api/supervisors/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const updateData = req.body;
+
+      // Check if supervisor exists
+      const existingSupervisor = await storage.getVendorSupervisorById(
+        parseInt(id),
+      );
+      if (!existingSupervisor) {
+        return res.status(404).json({ message: "Supervisor not found" });
+      }
+
+      // If updating Aadhaar, check for duplicates
+      if (
+        updateData.aadhaarNumber &&
+        updateData.aadhaarNumber !== existingSupervisor.aadhaarNumber
+      ) {
+        const duplicateAadhaar = await storage.getVendorSupervisorByAadhaar(
+          updateData.aadhaarNumber,
+        );
+        if (duplicateAadhaar) {
+          return res.status(400).json({
+            message: "Supervisor with this Aadhaar number already exists",
+          });
+        }
+      }
+
+      // Update supervisor
+      const updatedSupervisor = await storage.updateVendorSupervisor(
+        parseInt(id),
+        updateData,
+      );
+
+      res.json(updatedSupervisor);
+    } catch (error) {
+      console.error("Error updating supervisor:", error);
+      res.status(500).json({ message: "Error updating supervisor" });
+    }
+  });
+
+  app.delete("/api/supervisors/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      // Soft delete by setting isActive to false
+      const updatedSupervisor = await storage.updateVendorSupervisor(
+        parseInt(id),
+        {
+          isActive: false,
+        },
+      );
+
+      res.json({ message: "Supervisor deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting supervisor:", error);
+      res.status(500).json({ message: "Error deleting supervisor" });
+    }
+  });
+
+  // Search supervisors by name or Aadhaar
+  app.get("/api/supervisors/search", async (req, res) => {
+    try {
+      const { query, vendorId, storeId } = req.query;
+
+      if (!query) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+
+      // You'll need to implement this method in storage.ts
+      const supervisors = await storage.searchVendorSupervisors(
+        query as string,
+        vendorId ? parseInt(vendorId as string) : undefined,
+        storeId ? parseInt(storeId as string) : undefined,
+      );
+
+      res.json(supervisors);
+    } catch (error) {
+      console.error("Error searching supervisors:", error);
+      res.status(500).json({ message: "Error searching supervisors" });
     }
   });
 
   return httpServer;
 }
-
 function generateCSV(data: any[]): string {
   if (data.length === 0) return "";
 
@@ -632,7 +842,6 @@ function generateCSV(data: any[]): string {
 
   return [headers.join(","), ...rows].join("\n");
 }
-
 
 // import { photoManager } from "./firebase-service";
 

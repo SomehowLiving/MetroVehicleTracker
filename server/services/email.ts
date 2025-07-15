@@ -98,3 +98,7 @@ function generateCSVReport(data: any[]): string {
 
   return [headers, ...rows].join("\n");
 }
+
+
+
+//store vendor driver/sup/loader(aadhar id )-dropdown  checkin(data+ time)  ckeckout

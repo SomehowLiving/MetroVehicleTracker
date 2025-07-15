@@ -1,4 +1,4 @@
-import { eq, and, gte, lte, desc, count } from "drizzle-orm";
+import { eq, and, gte, lte, desc, count, or, ilike, asc } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import {
@@ -31,6 +31,7 @@ import {
   type InsertFraudLog,
   type FraudCheck,
 } from "@shared/schema";
+
 
 // Database connection
 if (!process.env.DATABASE_URL) {
@@ -422,6 +423,88 @@ export class PostgresStorage implements IStorage {
       .where(eq(vendorSupervisors.aadhaarNumber, aadhaarNumber))
       .limit(1);
     return result[0] || null;
+  }
+
+  // Additional Vendor Supervisors methods
+  async getVendorSupervisorById(id: number): Promise<VendorSupervisor | null> {
+    const result = await db
+      .select()
+      .from(vendorSupervisors)
+      .where(
+        and(
+          eq(vendorSupervisors.id, id),
+          eq(vendorSupervisors.isActive, true)
+        )
+      )
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async updateVendorSupervisor(
+    id: number,
+    updates: Partial<InsertVendorSupervisor>
+  ): Promise<VendorSupervisor> {
+    const result = await db
+      .update(vendorSupervisors)
+      .set(updates)
+      .where(eq(vendorSupervisors.id, id))
+      .returning();
+    return result[0];
+  }
+
+  async searchVendorSupervisors(
+    query: string,
+    vendorId?: number,
+    storeId?: number
+  ): Promise<VendorSupervisor[]> {
+    const conditions = [
+      eq(vendorSupervisors.isActive, true),
+      or(
+        ilike(vendorSupervisors.name, `%${query}%`),
+        ilike(vendorSupervisors.aadhaarNumber, `%${query}%`)
+      )
+    ];
+
+    if (vendorId) {
+      conditions.push(eq(vendorSupervisors.vendorId, vendorId));
+    }
+
+    if (storeId) {
+      conditions.push(eq(vendorSupervisors.storeId, storeId));
+    }
+
+    return await db
+      .select()
+      .from(vendorSupervisors)
+      .where(and(...conditions))
+      .orderBy(vendorSupervisors.name);
+  }
+
+  async getAllVendorSupervisors(storeId?: number): Promise<VendorSupervisor[]> {
+    const conditions = [eq(vendorSupervisors.isActive, true)];
+
+    if (storeId) {
+      conditions.push(eq(vendorSupervisors.storeId, storeId));
+    }
+
+    return await db
+      .select()
+      .from(vendorSupervisors)
+      .where(and(...conditions))
+      .orderBy(vendorSupervisors.name);
+  }
+
+  async getVendorSupervisorsByVendor(vendorId: number): Promise<VendorSupervisor[]> {
+    return await db
+      .select()
+      .from(vendorSupervisors)
+      .where(
+        and(
+          eq(vendorSupervisors.vendorId, vendorId),
+          eq(vendorSupervisors.isActive, true)
+        )
+      )
+      .orderBy(vendorSupervisors.name);
   }
 
   // Fraud Detection methods
