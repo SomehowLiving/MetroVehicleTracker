@@ -8,9 +8,8 @@ import {
   vehicles,
   checkins,
   manpower,
-  vehicleLoaders,
   vendorSupervisors,
-  fraudLogs,
+  vehicleLoaders,
   fsdCheckins,
   supervisorCheckins,
   labourCheckins,
@@ -20,9 +19,8 @@ import {
   type Vehicle,
   type Checkin,
   type Manpower,
-  type VehicleLoader,
   type VendorSupervisor,
-  type FraudLog,
+  type VehicleLoader,
   type FsdCheckin,
   type SupervisorCheckin,
   type LabourCheckin,
@@ -32,9 +30,8 @@ import {
   type InsertVehicle,
   type InsertCheckin,
   type InsertManpower,
-  type InsertVehicleLoader,
   type InsertVendorSupervisor,
-  type InsertFraudLog,
+  type InsertVehicleLoader,
   type InsertFsdCheckin,
   type InsertSupervisorCheckin,
   type InsertLabourCheckin,
@@ -913,7 +910,7 @@ export class PostgresStorage implements IStorage {
     if (storeId) {
       conditions.push(eq(supervisorCheckins.storeId, storeId));
     }
-    
+
     return await db
       .select()
       .from(supervisorCheckins)
@@ -958,11 +955,12 @@ export class PostgresStorage implements IStorage {
   }
 
   async getActiveLabourCheckins(storeId?: number): Promise<LabourCheckin[]> {
+```text
     const conditions = [eq(labourCheckins.status, "In")];
     if (storeId) {
       conditions.push(eq(labourCheckins.storeId, storeId));
     }
-    
+
     return await db
       .select()
       .from(labourCheckins)
@@ -976,6 +974,16 @@ export class PostgresStorage implements IStorage {
       .from(labourCheckins)
       .where(eq(labourCheckins.id, id))
       .limit(1);
+    return result[0];
+  }
+
+  async createVendorSupervisor(supervisor: InsertVendorSupervisor): Promise<VendorSupervisor> {
+    const result = await db.insert(vendorSupervisors).values(supervisor).returning();
+    return result[0];
+  }
+
+  async createVendorLoader(loader: InsertVehicleLoader): Promise<VehicleLoader> {
+    const result = await db.insert(vehicleLoaders).values(loader).returning();
     return result[0];
   }
 }
