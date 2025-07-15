@@ -194,37 +194,53 @@ export default function FsdDashboard() {
   });
 
   // Export to Excel
-  const exportToExcel = () => {
-    if (!activeVehicles || activeVehicles.length === 0) {
+  const exportToExcel = async () => {
+    try {
+      // Fetch all vehicles including checked out ones for export
+      const response = await fetch(`/api/dashboard/active-vehicles?storeId=${user?.storeId}&includeAll=true`);
+      const allVehicles = await response.json();
+
+      if (!allVehicles || allVehicles.length === 0) {
+        toast({
+          title: "No Data",
+          description: "No vehicle data to export",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const exportData = allVehicles.map((vehicle: any) => ({
+        "Vehicle Number": vehicle.vehicleNumber || "N/A",
+        "Driver Name": vehicle.driverName || "N/A",
+        "Vendor Name": vehicle.vendorName || "N/A",
+        "Entry Time": vehicle.createdAt ? new Date(vehicle.createdAt).toLocaleString() : "N/A",
+        "Exit Time": vehicle.closingKmTimestamp ? new Date(vehicle.closingKmTimestamp).toLocaleString() : "Not yet",
+        "Duration": vehicle.duration || "N/A",
+        "Opening KM": vehicle.openingKm || 0,
+        "Closing KM": vehicle.closingKm || "N/A",
+        "Status": vehicle.status || "Unknown",
+        "Store": vehicle.storeName || "N/A",
+      }));
+
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "Vehicle Report");
+      
+      const fileName = `Store${user?.storeId || 'Unknown'}_Vehicle_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+      
       toast({
-        title: "No Data",
-        description: "No vehicle data to export",
+        title: "Export Successful",
+        description: `Data exported to ${fileName}`,
+      });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast({
+        title: "Export Failed",
+        description: "Failed to export data. Please try again.",
         variant: "destructive",
       });
-      return;
     }
-
-    const exportData = activeVehicles.map((vehicle: any) => ({
-      "Vehicle Number": vehicle.vehicleNumber,
-      "Driver Name": vehicle.driverName,
-      "Vendor Name": vehicle.vendorName,
-      "Entry Time": new Date(vehicle.createdAt).toLocaleString(),
-      "Duration": vehicle.duration,
-      "Opening KM": vehicle.openingKm || "N/A",
-      "Status": vehicle.status,
-    }));
-
-    const worksheet = XLSX.utils.json_to_sheet(exportData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Active Vehicles");
-    
-    const fileName = `${user?.storeId || 'store'}_vehicles_${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
-    
-    toast({
-      title: "Export Successful",
-      description: `Data exported to ${fileName}`,
-    });
   };
 
   // Handle real-time updates
@@ -289,9 +305,9 @@ export default function FsdDashboard() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Left Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          {/* Left Sidebar - Reduced width */}
+          <div className="lg:col-span-2 space-y-4">
             {/* Supervisor Attendance */}
             <Card>
               <CardHeader>
@@ -471,8 +487,8 @@ export default function FsdDashboard() {
             </Card>
           </div>
 
-          {/* Main Content Area */}
-          <div className="lg:col-span-3 space-y-6">
+          {/* Main Content Area - Increased width */}
+          <div className="lg:col-span-3 space-y-4">
             {/* Header Actions */}
             <div className="flex items-center justify-between">
               <h2 className="text-2xl font-bold text-gray-900">Live Vehicle Status</h2>

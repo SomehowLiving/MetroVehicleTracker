@@ -363,31 +363,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/dashboard/active-vehicles", async (req, res) => {
     try {
-      const { storeId } = req.query;
+      const { storeId, includeAll } = req.query;
       const storeIdNum = storeId ? parseInt(storeId as string) : undefined;
+      const showAll = includeAll === 'true';
 
-      const activeCheckins = await storage.getActiveCheckins(storeIdNum);
+      let checkins;
+      if (showAll) {
+        // Get today's checkins (both active and completed)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        checkins = await storage.getCheckinsByDateRange(today, tomorrow, storeIdNum);
+      } else {
+        // Get only active checkins
+        checkins = await storage.getActiveCheckins(storeIdNum);
+      }
 
       // Add duration calculation
-      const vehiclesWithDuration = activeCheckins.map((checkin) => {
-        const durationMs = checkin.createdAt
-          ? Date.now() - checkin.createdAt.getTime()
-          : 0;
+      const vehiclesWithDuration = checkins.map((checkin) => {
+        const startTime = checkin.createdAt?.getTime() || Date.now();
+        const endTime = checkin.closingKmTimestamp?.getTime() || Date.now();
+        const durationMs = endTime - startTime;
+        
         const hours = Math.floor(durationMs / (1000 * 60 * 60));
-        const minutes = Math.floor(
-          (durationMs % (1000 * 60 * 60)) / (1000 * 60),
-        );
+        const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
 
         return {
           ...checkin,
-          duration: `${hours}h ${minutes}m`,
-          isExtended: hours >= 4,
+          duration: checkin.status === 'Out' ? `${hours}h ${minutes}m` : `${Math.floor((Date.now() - startTime) / (1000 * 60 * 60))}h ${Math.floor(((Date.now() - startTime) % (1000 * 60 * 60)) / (1000 * 60))}m`,
+          isExtended: checkin.status === 'In' && (Date.now() - startTime) / (1000 * 60 * 60) >= 4,
         };
       });
 
       res.json(vehiclesWithDuration);
     } catch (error) {
-      res.status(500).json({ message: "Error fetching active vehicles" });
+      res.status(500).json({ message: "Error fetching vehicles" });
     }
   });
 

@@ -60,16 +60,17 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       setUser(data.user);
       localStorage.setItem("auth_token", data.token);
 
-      // Navigate based on role
-      let targetPath;
+      // Small delay to ensure state is updated
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Redirect based on role with explicit navigation
       if (role === "admin") {
-        targetPath = "/admin";
+        window.location.href = "/admin";
       } else if (role === "fsd") {
-        targetPath = "/fsd-dashboard";
-      } else {
-        targetPath = "/gate-operator";
+        window.location.href = "/fsd-dashboard";
+      } else if (role === "gate-operator") {
+        window.location.href = "/gate-operator";
       }
-      setLocation(targetPath);
 
       return true;
     } catch (err) {
@@ -147,17 +148,17 @@ export function useAuth() {
 //         password,
 //         role
 //       });
-      
+
 //       if (!response.ok) {
 //         throw new Error('Login failed');
 //       }
-      
+
 //       const data = await response.json();
-      
+
 //       // Set user and token first
 //       setUser(data.user);
 //       localStorage.setItem("auth_token", data.token);
-      
+
 //       // Use setTimeout to ensure state updates before navigation
 //       setTimeout(() => {
 //         if (role === "admin") {
@@ -166,7 +167,7 @@ export function useAuth() {
 //           setLocation("/gate-operator");
 //         }
 //       }, 100);
-      
+
 //       return true;
 //     } catch (error) {
 //       console.error("Login failed:", error);

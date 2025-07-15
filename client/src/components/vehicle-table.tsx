@@ -35,10 +35,10 @@ export function VehicleTable({ refreshKey, storeId }: VehicleTableProps) {
   const { data: vehicles, isLoading } = useQuery({
     queryKey: ["/api/dashboard/active-vehicles", storeId, refreshKey],
     queryFn: async () => {
-      const url = storeId 
-        ? `/api/dashboard/active-vehicles?storeId=${storeId}`
-        : "/api/dashboard/active-vehicles";
-      const res = await fetch(url);
+      const baseUrl = storeId 
+        ? `/api/dashboard/active-vehicles?storeId=${storeId}&includeAll=true`
+        : "/api/dashboard/active-vehicles?includeAll=true";
+      const res = await fetch(baseUrl);
       return res.json();
     },
   });
@@ -51,7 +51,7 @@ export function VehicleTable({ refreshKey, storeId }: VehicleTableProps) {
     const matchesStore =
       !filters.store ||
       filters.store === "all" ||
-      vehicle.storeId.toString() === filters.store;
+      vehicle.storeId?.toString() === filters.store;
     const matchesStatus =
       !filters.status ||
       filters.status === "all" ||
@@ -59,9 +59,10 @@ export function VehicleTable({ refreshKey, storeId }: VehicleTableProps) {
     const matchesSearch =
       !filters.search ||
       vehicle.vehicleNumber
-        .toLowerCase()
+        ?.toLowerCase()
         .includes(filters.search.toLowerCase()) ||
-      vehicle.driverName.toLowerCase().includes(filters.search.toLowerCase());
+      vehicle.driverName?.toLowerCase().includes(filters.search.toLowerCase()) ||
+      vehicle.vendorName?.toLowerCase().includes(filters.search.toLowerCase());
 
     return matchesStore && matchesStatus && matchesSearch;
   });
@@ -134,7 +135,7 @@ export function VehicleTable({ refreshKey, storeId }: VehicleTableProps) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="In">Checked In</SelectItem>
+            <SelectItem value="In">Currently Inside</SelectItem>
             <SelectItem value="Out">Checked Out</SelectItem>
           </SelectContent>
         </Select>
