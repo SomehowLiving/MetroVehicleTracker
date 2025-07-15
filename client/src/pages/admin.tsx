@@ -12,6 +12,8 @@ import { VehicleTable } from "@/components/vehicle-table";
 import { ExportPanel } from "@/components/export-panel";
 import { FraudDetectionDashboard } from "@/components/fraud-detection-dashboard";
 import { FsdAttendanceWidget } from "@/components/fsd-attendance-widget";
+import { SupervisorStatusWidget } from "@/components/supervisor-status-widget";
+import { LabourStatusWidget } from "@/components/labour-status-widget";
 import { useEffect, useState } from "react";
 
 export default function Admin() {
@@ -211,9 +213,10 @@ export default function Admin() {
         </div>
 
         {/* Main Dashboard Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-8">
-          {/* Live Vehicle Status */}
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 mt-8">
+          {/* Live Updates Section */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* Live Vehicle Status */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -241,6 +244,29 @@ export default function Admin() {
                 <VehicleTable refreshKey={refreshKey} />
               </CardContent>
             </Card>
+
+            {/* Live Supervisor & Labour Status */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Active Supervisors */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Active Supervisors</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SupervisorStatusWidget refreshKey={refreshKey} />
+                </CardContent>
+              </Card>
+
+              {/* Active Labour */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Active Labour</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <LabourStatusWidget refreshKey={refreshKey} />
+                </CardContent>
+              </Card>
+            </div>
           </div>
 
           {/* Sidebar */}

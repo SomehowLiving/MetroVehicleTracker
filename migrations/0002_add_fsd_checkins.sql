@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS "fsd_checkins" (
 	"phone_number" varchar(20),
 	"photo_url" varchar(500),
 	"notes" text,
+	"created_by" integer,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
