@@ -13,6 +13,7 @@ import {
   fsdCheckins,
   supervisorCheckins,
   labourCheckins,
+  fraudLogs,
   type Store,
   type User,
   type Vendor,
@@ -36,7 +37,8 @@ import {
   type InsertSupervisorCheckin,
   type InsertLabourCheckin,
   type FraudCheck,
-  fraud_logs,
+  type FraudLog,
+  type InsertFraudLog,
 } from "@shared/schema";
 
 // Database connection
@@ -566,18 +568,18 @@ export class PostgresStorage implements IStorage {
   async getFraudLogs(checkinId?: number): Promise<FraudLog[]> {
     const conditions = [];
     if (checkinId) {
-      conditions.push(eq(fraud_logs.checkinId, checkinId));
+      conditions.push(eq(fraudLogs.checkinId, checkinId));
     }
 
     return await db
       .select()
-      .from(fraud_logs)
+      .from(fraudLogs)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(fraud_logs.createdAt));
+      .orderBy(desc(fraudLogs.createdAt));
   }
 
   async createFraudLog(log: InsertFraudLog): Promise<FraudLog> {
-    const result = await db.insert(fraud_logs).values(log).returning();
+    const result = await db.insert(fraudLogs).values(log).returning();
     return result[0];
   }
 
@@ -587,14 +589,14 @@ export class PostgresStorage implements IStorage {
 
       const alerts = await db
         .select()
-        .from(fraud_logs)
+        .from(fraudLogs)
         .where(
           and(
-            gte(fraud_logs.createdAt, since),
-            eq(fraud_logs.isResolved, false)
+            gte(fraudLogs.createdAt, since),
+            eq(fraudLogs.isResolved, false)
           )
         )
-        .orderBy(desc(fraud_logs.createdAt))
+        .orderBy(desc(fraudLogs.createdAt))
         .limit(100);
 
       return alerts;
@@ -607,13 +609,13 @@ export class PostgresStorage implements IStorage {
   async resolveFraudAlert(alertId: number, resolvedBy: number) {
     try {
       const result = await db
-        .update(fraud_logs)
+        .update(fraudLogs)
         .set({
           isResolved: true,
           resolvedAt: new Date(),
           resolvedBy: resolvedBy,
         })
-        .where(eq(fraud_logs.id, alertId))
+        .where(eq(fraudLogs.id, alertId))
         .execute();
 
       return result;
@@ -677,7 +679,7 @@ export class PostgresStorage implements IStorage {
         fraudChecks
           .filter((check) => check.detected && check.severity === "high")
           .map((check) =>
-            db.insert(fraud_logs).values({
+            db.insert(fraudLogs).values({
               checkinId: createdCheckin.id,
               fraudType: check.type,
               description: check.description,
@@ -698,18 +700,18 @@ export class PostgresStorage implements IStorage {
           id: checkins.id,
           vehicleNumber: checkins.vehicleNumber,
           driverName: checkins.driverName,
-          storeName: stores.name, // Changed to stores.name
+          storeName: stores.name,
           openingKm: checkins.openingKm,
           closingKm: checkins.closingKm,
-          fraudType: fraud_logs.fraudType,
-          description: fraud_logs.description,
-          severity: fraud_logs.severity,
+          fraudType: fraudLogs.fraudType,
+          description: fraudLogs.description,
+          severity: fraudLogs.severity,
           createdAt: checkins.createdAt,
-          isResolved: fraud_logs.isResolved,
+          isResolved: fraudLogs.isResolved,
           supervisorName: vendorSupervisors.name,
         })
         .from(checkins)
-        .innerJoin(fraud_logs, eq(fraud_logs.checkinId, checkins.id))
+        .innerJoin(fraudLogs, eq(fraudLogs.checkinId, checkins.id))
         .leftJoin(
           vendorSupervisors,
           and(
@@ -718,14 +720,14 @@ export class PostgresStorage implements IStorage {
             eq(vendorSupervisors.isActive, true),
           ),
         )
-        .innerJoin(stores, eq(stores.id, checkins.storeId)) // Join with stores table
-        .where(eq(fraud_logs.isResolved, false))
+        .innerJoin(stores, eq(stores.id, checkins.storeId))
+        .where(eq(fraudLogs.isResolved, false))
         .orderBy(desc(checkins.createdAt))
         .limit(limit);
 
-      // if (storeId) {
-      //   query = query.where(eq(checkins.storeId, storeId));
-      // }
+      if (storeId) {
+        query = query.where(eq(checkins.storeId, storeId));
+      }
 
       const results = await query;
       return results;
@@ -835,11 +837,11 @@ export class PostgresStorage implements IStorage {
     // Unresolved alerts
     const unresolvedAlerts = await db
       .select({ count: count() })
-      .from(fraud_logs)
-      .leftJoin(checkins, eq(fraud_logs.checkinId, checkins.id))
+      .from(fraudLogs)
+      .leftJoin(checkins, eq(fraudLogs.checkinId, checkins.id))
       .where(
         and(
-          eq(fraud_logs.isResolved, false),
+          eq(fraudLogs.isResolved, false),
           ...(storeId ? [eq(checkins.storeId, storeId)] : []),
         ),
       );
@@ -847,14 +849,14 @@ export class PostgresStorage implements IStorage {
     // Fraud by type
     const fraudByType = await db
       .select({
-        type: fraud_logs.fraudType,
+        type: fraudLogs.fraudType,
         count: count(),
-        severity: fraud_logs.severity,
+        severity: fraudLogs.severity,
       })
-      .from(fraud_logs)
-      .leftJoin(checkins, eq(fraud_logs.checkinId, checkins.id))
+      .from(fraudLogs)
+      .leftJoin(checkins, eq(fraudLogs.checkinId, checkins.id))
       .where(storeId ? eq(checkins.storeId, storeId) : undefined)
-      .groupBy(fraud_logs.fraudType, fraud_logs.severity)
+      .groupBy(fraudLogs.fraudType, fraudLogs.severity)
       .orderBy(desc(count()));
 
     return {
@@ -895,6 +897,13 @@ export class PostgresStorage implements IStorage {
       .select()
       .from(fsdCheckins)
       .where(eq(fsdCheckins.storeId, storeId))
+      .orderBy(desc(fsdCheckins.createdAt));
+  }
+
+  async getAllFsdCheckins(): Promise<FsdCheckin[]> {
+    return await db
+      .select()
+      .from(fsdCheckins)
       .orderBy(desc(fsdCheckins.createdAt));
   }
 
@@ -1030,6 +1039,27 @@ export class PostgresStorage implements IStorage {
       .where(eq(labourCheckins.id, id))
       .limit(1);
     return result[0];
+  }
+
+  async getAllSupervisorCheckins(): Promise<SupervisorCheckin[]> {
+    return await db
+      .select()
+      .from(supervisorCheckins)
+      .orderBy(desc(supervisorCheckins.createdAt));
+  }
+
+  async getAllLabourCheckins(): Promise<LabourCheckin[]> {
+    return await db
+      .select()
+      .from(labourCheckins)
+      .orderBy(desc(labourCheckins.createdAt));
+  }
+
+  async getAllCheckins(): Promise<Checkin[]> {
+    return await db
+      .select()
+      .from(checkins)
+      .orderBy(desc(checkins.createdAt));
   }
 
   async createVendorSupervisor(

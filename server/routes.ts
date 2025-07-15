@@ -497,6 +497,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin comprehensive export route
+  app.post("/api/admin/export/comprehensive", async (req, res) => {
+    try {
+      const { startDate, endDate, format = "json" } = req.body;
+
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+
+      // Fetch all data across all stores
+      const [
+        stores,
+        vehicleCheckins,
+        fsdCheckins,
+        supervisorCheckins,
+        labourCheckins,
+        fraudLogs,
+        vendors,
+        vehicles
+      ] = await Promise.all([
+        storage.getAllStores(),
+        storage.getCheckinsByDateRange(start, end),
+        storage.getFsdCheckinsByStore ? 
+          Promise.all((await storage.getAllStores()).map(store => 
+            storage.getFsdCheckinsByStore(store.id)
+          )).then(results => results.flat()) : [],
+        storage.getSupervisorCheckinsByStore ? 
+          Promise.all((await storage.getAllStores()).map(store => 
+            storage.getSupervisorCheckinsByStore(store.id)
+          )).then(results => results.flat()) : [],
+        storage.getLabourCheckinsByStore ? 
+          Promise.all((await storage.getAllStores()).map(store => 
+            storage.getLabourCheckinsByStore(store.id)
+          )).then(results => results.flat()) : [],
+        storage.getFraudLogs(),
+        storage.getAllVendors(),
+        // Get vehicles for each vendor
+        storage.getAllVendors().then(vendors => 
+          Promise.all(vendors.map(vendor => 
+            storage.getVehicleById ? [] : []
+          ))
+        )
+      ]);
+
+      const comprehensiveData = {
+        exportInfo: {
+          generatedAt: new Date().toISOString(),
+          dateRange: { start: start.toISOString(), end: end.toISOString() },
+          totalStores: stores.length
+        },
+        stores: stores.map(store => ({
+          ...store,
+          vehicleCheckins: vehicleCheckins.filter(c => c.storeId === store.id),
+          fsdCheckins: fsdCheckins.filter(c => c.storeId === store.id),
+          supervisorCheckins: supervisorCheckins.filter(c => c.storeId === store.id),
+          labourCheckins: labourCheckins.filter(c => c.storeId === store.id)
+        })),
+        summary: {
+          totalVehicleCheckins: vehicleCheckins.length,
+          totalFsdCheckins: fsdCheckins.length,
+          totalSupervisorCheckins: supervisorCheckins.length,
+          totalLabourCheckins: labourCheckins.length,
+          totalFraudAlerts: fraudLogs.length,
+          storeBreakdown: stores.map(store => ({
+            storeId: store.id,
+            storeName: store.name,
+            vehicleCount: vehicleCheckins.filter(c => c.storeId === store.id).length,
+            fsdCount: fsdCheckins.filter(c => c.storeId === store.id).length,
+            supervisorCount: supervisorCheckins.filter(c => c.storeId === store.id).length,
+            labourCount: labourCheckins.filter(c => c.storeId === store.id).length
+          }))
+        },
+        vendors,
+        fraudLogs
+      };
+
+      if (format === "csv") {
+        const csvData = generateComprehensiveCSV(comprehensiveData);
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader(
+          "Content-Disposition",
+          'attachment; filename="comprehensive_report.csv"',
+        );
+        res.send(csvData);
+      } else {
+        res.json(comprehensiveData);
+      }
+    } catch (error) {
+      console.error("Comprehensive export error:", error);
+      res.status(500).json({ message: "Error generating comprehensive export" });
+    }
+  });
+
   app.post("/api/export/email", async (req, res) => {
     try {
       const { startDate, endDate, storeId, email, format = "csv" } = req.body;
@@ -1142,6 +1234,95 @@ function generateExcel(data: any[]): Buffer {
   // In a production environment, you'd use a library like xlsx
   const csvData = generateCSV(data);
   return Buffer.from(csvData, 'utf8');
+}
+
+function generateComprehensiveCSV(data: any): string {
+  let csvContent = "";
+  
+  // Export Info
+  csvContent += "EXPORT INFORMATION\n";
+  csvContent += `Generated At,${data.exportInfo.generatedAt}\n`;
+  csvContent += `Date Range,${data.exportInfo.dateRange.start} to ${data.exportInfo.dateRange.end}\n`;
+  csvContent += `Total Stores,${data.exportInfo.totalStores}\n\n`;
+
+  // Summary
+  csvContent += "SUMMARY\n";
+  csvContent += `Total Vehicle Checkins,${data.summary.totalVehicleCheckins}\n`;
+  csvContent += `Total FSD Checkins,${data.summary.totalFsdCheckins}\n`;
+  csvContent += `Total Supervisor Checkins,${data.summary.totalSupervisorCheckins}\n`;
+  csvContent += `Total Labour Checkins,${data.summary.totalLabourCheckins}\n`;
+  csvContent += `Total Fraud Alerts,${data.summary.totalFraudAlerts}\n\n`;
+
+  // Store Breakdown
+  csvContent += "STORE BREAKDOWN\n";
+  csvContent += "Store ID,Store Name,Vehicle Checkins,FSD Checkins,Supervisor Checkins,Labour Checkins\n";
+  data.summary.storeBreakdown.forEach((store: any) => {
+    csvContent += `${store.storeId},"${store.storeName}",${store.vehicleCount},${store.fsdCount},${store.supervisorCount},${store.labourCount}\n`;
+  });
+  csvContent += "\n";
+
+  // Vehicle Checkins
+  csvContent += "VEHICLE CHECKINS\n";
+  csvContent += "Store,Vehicle Number,Driver Name,Vendor,Entry Time,Exit Time,Status,Opening KM,Closing KM\n";
+  data.stores.forEach((store: any) => {
+    store.vehicleCheckins.forEach((checkin: any) => {
+      const entryTime = new Date(checkin.createdAt).toLocaleString();
+      const exitTime = checkin.closingKmTimestamp ? new Date(checkin.closingKmTimestamp).toLocaleString() : "Not yet";
+      csvContent += `"${store.name}","${checkin.vehicleNumber}","${checkin.driverName}","${checkin.vendorName}","${entryTime}","${exitTime}","${checkin.status}",${checkin.openingKm || 0},${checkin.closingKm || 0}\n`;
+    });
+  });
+  csvContent += "\n";
+
+  // FSD Checkins
+  csvContent += "FSD CHECKINS\n";
+  csvContent += "Store,Name,Designation,Checkin Time,Checkout Time,Status,Phone Number\n";
+  data.stores.forEach((store: any) => {
+    store.fsdCheckins.forEach((checkin: any) => {
+      const checkinTime = new Date(checkin.checkinTime).toLocaleString();
+      const checkoutTime = checkin.checkoutTime ? new Date(checkin.checkoutTime).toLocaleString() : "Not yet";
+      csvContent += `"${store.name}","${checkin.name}","${checkin.designation}","${checkinTime}","${checkoutTime}","${checkin.status}","${checkin.phoneNumber || 'N/A'}"\n`;
+    });
+  });
+  csvContent += "\n";
+
+  // Supervisor Checkins
+  csvContent += "SUPERVISOR CHECKINS\n";
+  csvContent += "Store,Name,Checkin Time,Checkout Time,Status,Phone Number,Aadhaar\n";
+  data.stores.forEach((store: any) => {
+    store.supervisorCheckins.forEach((checkin: any) => {
+      const checkinTime = new Date(checkin.checkinTime).toLocaleString();
+      const checkoutTime = checkin.checkoutTime ? new Date(checkin.checkoutTime).toLocaleString() : "Not yet";
+      const maskedAadhaar = checkin.aadhaarNumber ? `****-****-${checkin.aadhaarNumber.slice(-4)}` : 'N/A';
+      csvContent += `"${store.name}","${checkin.name}","${checkinTime}","${checkoutTime}","${checkin.status}","${checkin.phoneNumber || 'N/A'}","${maskedAadhaar}"\n`;
+    });
+  });
+  csvContent += "\n";
+
+  // Labour Checkins
+  csvContent += "LABOUR CHECKINS\n";
+  csvContent += "Store,Name,Checkin Time,Checkout Time,Status,Phone Number,Aadhaar\n";
+  data.stores.forEach((store: any) => {
+    store.labourCheckins.forEach((checkin: any) => {
+      const checkinTime = new Date(checkin.checkinTime).toLocaleString();
+      const checkoutTime = checkin.checkoutTime ? new Date(checkin.checkoutTime).toLocaleString() : "Not yet";
+      const maskedAadhaar = checkin.aadhaarNumber ? `****-****-${checkin.aadhaarNumber.slice(-4)}` : 'N/A';
+      csvContent += `"${store.name}","${checkin.name}","${checkinTime}","${checkoutTime}","${checkin.status}","${checkin.phoneNumber || 'N/A'}","${maskedAadhaar}"\n`;
+    });
+  });
+  csvContent += "\n";
+
+  // Fraud Logs
+  if (data.fraudLogs.length > 0) {
+    csvContent += "FRAUD ALERTS\n";
+    csvContent += "Fraud Type,Description,Severity,Created At,Resolved,Resolved At\n";
+    data.fraudLogs.forEach((fraud: any) => {
+      const createdAt = new Date(fraud.createdAt).toLocaleString();
+      const resolvedAt = fraud.resolvedAt ? new Date(fraud.resolvedAt).toLocaleString() : "N/A";
+      csvContent += `"${fraud.fraudType}","${fraud.description}","${fraud.severity}","${createdAt}","${fraud.isResolved ? 'Yes' : 'No'}","${resolvedAt}"\n`;
+    });
+  }
+
+  return csvContent;
 }
 
 // import { photoManager } from "./firebase-service";
