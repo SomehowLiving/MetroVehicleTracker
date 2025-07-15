@@ -60,8 +60,15 @@ export function AuthProvider({ children }: { children: ReactNode }): JSX.Element
       setUser(data.user);
       localStorage.setItem("auth_token", data.token);
 
-      // Navigate immediately after setting state
-      const targetPath = role === "admin" ? "/admin" : "/gate-operator";
+      // Navigate based on role
+      let targetPath;
+      if (role === "admin") {
+        targetPath = "/admin";
+      } else if (role === "fsd") {
+        targetPath = "/fsd-dashboard";
+      } else {
+        targetPath = "/gate-operator";
+      }
       setLocation(targetPath);
 
       return true;

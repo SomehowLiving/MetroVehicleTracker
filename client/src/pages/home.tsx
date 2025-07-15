@@ -65,7 +65,7 @@ export default function Home() {
                 Store Login
               </Button>
               <Button
-                onClick={() => setLocation("/login?role=gate_operator")}
+                onClick={() => setLocation("/login?role=gate-operator")}
                 className="bg-metro-yellow text-metro-blue hover:bg-yellow-400"
               >
                 <Truck className="mr-2 h-4 w-4" />
