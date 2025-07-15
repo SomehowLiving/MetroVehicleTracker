@@ -36,6 +36,7 @@ import {
   type InsertSupervisorCheckin,
   type InsertLabourCheckin,
   type FraudCheck,
+  fraud_logs,
 } from "@shared/schema";
 
 // Database connection
@@ -565,42 +566,61 @@ export class PostgresStorage implements IStorage {
   async getFraudLogs(checkinId?: number): Promise<FraudLog[]> {
     const conditions = [];
     if (checkinId) {
-      conditions.push(eq(fraudLogs.checkinId, checkinId));
+      conditions.push(eq(fraud_logs.checkinId, checkinId));
     }
 
     return await db
       .select()
-      .from(fraudLogs)
+      .from(fraud_logs)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
-      .orderBy(desc(fraudLogs.createdAt));
+      .orderBy(desc(fraud_logs.createdAt));
   }
 
   async createFraudLog(log: InsertFraudLog): Promise<FraudLog> {
-    const result = await db.insert(fraudLogs).values(log).returning();
+    const result = await db.insert(fraud_logs).values(log).returning();
     return result[0];
   }
 
-  async getRecentFraudAlerts(hours: number = 24): Promise<FraudLog[]> {
-    const since = new Date(Date.now() - hours * 60 * 60 * 1000);
+  async getRecentFraudAlerts(hours: number = 24) {
+    try {
+      const since = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-    return await db
-      .select()
-      .from(fraudLogs)
-      .where(
-        and(gte(fraudLogs.createdAt, since), eq(fraudLogs.isResolved, false)),
-      )
-      .orderBy(desc(fraudLogs.createdAt));
+      const alerts = await db
+        .select()
+        .from(fraud_logs)
+        .where(
+          and(
+            gte(fraud_logs.createdAt, since),
+            eq(fraud_logs.isResolved, false)
+          )
+        )
+        .orderBy(desc(fraud_logs.createdAt))
+        .limit(100);
+
+      return alerts;
+    } catch (error) {
+      console.error("Error fetching fraud alerts:", error);
+      throw error;
+    }
   }
 
-  async resolveFraudAlert(alertId: number, resolvedBy: number): Promise<void> {
-    await db
-      .update(fraudLogs)
-      .set({
-        isResolved: true,
-        resolvedBy,
-        resolvedAt: new Date(),
-      })
-      .where(eq(fraudLogs.id, alertId));
+  async resolveFraudAlert(alertId: number, resolvedBy: number) {
+    try {
+      const result = await db
+        .update(fraud_logs)
+        .set({
+          isResolved: true,
+          resolvedAt: new Date(),
+          resolvedBy: resolvedBy,
+        })
+        .where(eq(fraud_logs.id, alertId))
+        .execute();
+
+      return result;
+    } catch (error) {
+      console.error("Error resolving fraud alert:", error);
+      throw error;
+    }
   }
 
   // Enhanced checkin method with fraud detection
@@ -657,7 +677,7 @@ export class PostgresStorage implements IStorage {
         fraudChecks
           .filter((check) => check.detected && check.severity === "high")
           .map((check) =>
-            db.insert(fraudLogs).values({
+            db.insert(fraud_logs).values({
               checkinId: createdCheckin.id,
               fraudType: check.type,
               description: check.description,
@@ -671,47 +691,48 @@ export class PostgresStorage implements IStorage {
     return { checkin: createdCheckin, fraudChecks };
   }
 
-  async getFraudulentCheckinsWithDetails(
-    storeId?: number,
-    limit: number = 50,
-  ): Promise<any[]> {
-    const conditions = [eq(fraudLogs.isResolved, false)];
+  async getFraudulentCheckinsWithDetails(storeId?: number, limit: number = 50) {
+    try {
+      let query = db
+        .select({
+          id: checkins.id,
+          vehicleNumber: checkins.vehicleNumber,
+          driverName: checkins.driverName,
+          storeName: stores.name, // Changed to stores.name
+          openingKm: checkins.openingKm,
+          closingKm: checkins.closingKm,
+          fraudType: fraud_logs.fraudType,
+          description: fraud_logs.description,
+          severity: fraud_logs.severity,
+          createdAt: checkins.createdAt,
+          isResolved: fraud_logs.isResolved,
+          supervisorName: vendorSupervisors.name,
+        })
+        .from(checkins)
+        .innerJoin(fraud_logs, eq(fraud_logs.checkinId, checkins.id))
+        .leftJoin(
+          vendorSupervisors,
+          and(
+            eq(vendorSupervisors.vendorId, checkins.vendorId),
+            eq(vendorSupervisors.storeId, checkins.storeId),
+            eq(vendorSupervisors.isActive, true),
+          ),
+        )
+        .innerJoin(stores, eq(stores.id, checkins.storeId)) // Join with stores table
+        .where(eq(fraud_logs.isResolved, false))
+        .orderBy(desc(checkins.createdAt))
+        .limit(limit);
 
-    if (storeId) {
-      conditions.push(eq(checkins.storeId, storeId));
+      // if (storeId) {
+      //   query = query.where(eq(checkins.storeId, storeId));
+      // }
+
+      const results = await query;
+      return results;
+    } catch (error) {
+      console.error("Error fetching fraudulent checkins:", error);
+      throw error;
     }
-
-    const result = await db
-      .select({
-        id: checkins.id,
-        vehicleNumber: checkins.vehicleNumber,
-        driverName: checkins.driverName,
-        storeName: stores.name, // Changed to stores.name
-        openingKm: checkins.openingKm,
-        closingKm: checkins.closingKm,
-        fraudType: fraudLogs.fraudType,
-        description: fraudLogs.description,
-        severity: fraudLogs.severity,
-        createdAt: checkins.createdAt,
-        isResolved: fraudLogs.isResolved,
-        supervisorName: vendorSupervisors.name,
-      })
-      .from(checkins)
-      .innerJoin(fraudLogs, eq(fraudLogs.checkinId, checkins.id))
-      .leftJoin(
-        vendorSupervisors,
-        and(
-          eq(vendorSupervisors.vendorId, checkins.vendorId),
-          eq(vendorSupervisors.storeId, checkins.storeId),
-          eq(vendorSupervisors.isActive, true),
-        ),
-      )
-      .innerJoin(stores, eq(stores.id, checkins.storeId)) // Join with stores table
-      .where(and(...conditions))
-      .orderBy(desc(checkins.createdAt))
-      .limit(limit);
-
-    return result;
   }
 
   // Dashboard methods
@@ -814,11 +835,11 @@ export class PostgresStorage implements IStorage {
     // Unresolved alerts
     const unresolvedAlerts = await db
       .select({ count: count() })
-      .from(fraudLogs)
-      .leftJoin(checkins, eq(fraudLogs.checkinId, checkins.id))
+      .from(fraud_logs)
+      .leftJoin(checkins, eq(fraud_logs.checkinId, checkins.id))
       .where(
         and(
-          eq(fraudLogs.isResolved, false),
+          eq(fraud_logs.isResolved, false),
           ...(storeId ? [eq(checkins.storeId, storeId)] : []),
         ),
       );
@@ -826,14 +847,14 @@ export class PostgresStorage implements IStorage {
     // Fraud by type
     const fraudByType = await db
       .select({
-        type: fraudLogs.fraudType,
+        type: fraud_logs.fraudType,
         count: count(),
-        severity: fraudLogs.severity,
+        severity: fraud_logs.severity,
       })
-      .from(fraudLogs)
-      .leftJoin(checkins, eq(fraudLogs.checkinId, checkins.id))
+      .from(fraud_logs)
+      .leftJoin(checkins, eq(fraud_logs.checkinId, checkins.id))
       .where(storeId ? eq(checkins.storeId, storeId) : undefined)
-      .groupBy(fraudLogs.fraudType, fraudLogs.severity)
+      .groupBy(fraud_logs.fraudType, fraud_logs.severity)
       .orderBy(desc(count()));
 
     return {

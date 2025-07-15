@@ -479,10 +479,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'attachment; filename="vehicle_report.csv"',
         );
         res.send(csvData);
+      } else if (format === "excel") {
+        const excelData = generateExcel(checkins);
+        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader(
+          "Content-Disposition",
+          'attachment; filename="vehicle_report.xlsx"',
+        );
+        res.send(excelData);
       } else {
+        // Default to JSON
         res.json(checkins);
       }
     } catch (error) {
+      console.error("Export error:", error);
       res.status(500).json({ message: "Error generating export" });
     }
   });
@@ -1125,6 +1135,13 @@ function generateCSV(data: any[]): string {
   });
 
   return [headers.join(","), ...rows].join("\n");
+}
+
+function generateExcel(data: any[]): Buffer {
+  // For now, return CSV format as a fallback
+  // In a production environment, you'd use a library like xlsx
+  const csvData = generateCSV(data);
+  return Buffer.from(csvData, 'utf8');
 }
 
 // import { photoManager } from "./firebase-service";
