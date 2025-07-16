@@ -12,6 +12,7 @@ import {
   insertCheckinSchema,
   insertManpowerSchema,
   supervisorCheckinSchema,
+  supervisorEntrySchema,
   labourCheckinSchema,
 } from "@shared/schema";
 
@@ -342,15 +343,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storeIdNum,
       );
 
-      const averageStayHours = yesterdayCheckins.length > 0
-        ? yesterdayCheckins.reduce((sum, checkin) => {
-            if (checkin.closingKmTimestamp && checkin.createdAt) {
-              const hours = (checkin.closingKmTimestamp.getTime() - checkin.createdAt.getTime()) / (1000 * 60 * 60);
-              return sum + hours;
-            }
-            return sum;
-          }, 0) / yesterdayCheckins.filter(c => c.closingKmTimestamp).length
-        : 0;
+      const averageStayHours =
+        yesterdayCheckins.length > 0
+          ? yesterdayCheckins.reduce((sum, checkin) => {
+              if (checkin.closingKmTimestamp && checkin.createdAt) {
+                const hours =
+                  (checkin.closingKmTimestamp.getTime() -
+                    checkin.createdAt.getTime()) /
+                  (1000 * 60 * 60);
+                return sum + hours;
+              }
+              return sum;
+            }, 0) / yesterdayCheckins.filter((c) => c.closingKmTimestamp).length
+          : 0;
 
       res.json({
         todaysCheckins: yesterdayCheckins.length,
@@ -365,7 +370,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { storeId, includeAll } = req.query;
       const storeIdNum = storeId ? parseInt(storeId as string) : undefined;
-      const showAll = includeAll === 'true';
+      const showAll = includeAll === "true";
 
       let checkins;
       if (showAll) {
@@ -374,7 +379,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
-        checkins = await storage.getCheckinsByDateRange(today, tomorrow, storeIdNum);
+        checkins = await storage.getCheckinsByDateRange(
+          today,
+          tomorrow,
+          storeIdNum,
+        );
       } else {
         // Get only active checkins
         checkins = await storage.getActiveCheckins(storeIdNum);
@@ -385,14 +394,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const startTime = checkin.createdAt?.getTime() || Date.now();
         const endTime = checkin.closingKmTimestamp?.getTime() || Date.now();
         const durationMs = endTime - startTime;
-        
+
         const hours = Math.floor(durationMs / (1000 * 60 * 60));
-        const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+        const minutes = Math.floor(
+          (durationMs % (1000 * 60 * 60)) / (1000 * 60),
+        );
 
         return {
           ...checkin,
-          duration: checkin.status === 'Out' ? `${hours}h ${minutes}m` : `${Math.floor((Date.now() - startTime) / (1000 * 60 * 60))}h ${Math.floor(((Date.now() - startTime) % (1000 * 60 * 60)) / (1000 * 60))}m`,
-          isExtended: checkin.status === 'In' && (Date.now() - startTime) / (1000 * 60 * 60) >= 4,
+          duration:
+            checkin.status === "Out"
+              ? `${hours}h ${minutes}m`
+              : `${Math.floor((Date.now() - startTime) / (1000 * 60 * 60))}h ${Math.floor(((Date.now() - startTime) % (1000 * 60 * 60)) / (1000 * 60))}m`,
+          isExtended:
+            checkin.status === "In" &&
+            (Date.now() - startTime) / (1000 * 60 * 60) >= 4,
         };
       });
 
@@ -481,7 +497,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.send(csvData);
       } else if (format === "excel") {
         const excelData = generateExcel(checkins);
-        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        );
         res.setHeader(
           "Content-Disposition",
           'attachment; filename="vehicle_report.xlsx"',
@@ -514,44 +533,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         labourCheckins,
         fraudLogs,
         vendors,
-        vehicles
+        vehicles,
       ] = await Promise.all([
         storage.getAllStores(),
         storage.getCheckinsByDateRange(start, end),
-        storage.getFsdCheckinsByStore ? 
-          Promise.all((await storage.getAllStores()).map(store => 
-            storage.getFsdCheckinsByStore(store.id)
-          )).then(results => results.flat()) : [],
-        storage.getSupervisorCheckinsByStore ? 
-          Promise.all((await storage.getAllStores()).map(store => 
-            storage.getSupervisorCheckinsByStore(store.id)
-          )).then(results => results.flat()) : [],
-        storage.getLabourCheckinsByStore ? 
-          Promise.all((await storage.getAllStores()).map(store => 
-            storage.getLabourCheckinsByStore(store.id)
-          )).then(results => results.flat()) : [],
+        storage.getFsdCheckinsByStore
+          ? Promise.all(
+              (await storage.getAllStores()).map((store) =>
+                storage.getFsdCheckinsByStore(store.id),
+              ),
+            ).then((results) => results.flat())
+          : [],
+        storage.getSupervisorCheckinsByStore
+          ? Promise.all(
+              (await storage.getAllStores()).map((store) =>
+                storage.getSupervisorCheckinsByStore(store.id),
+              ),
+            ).then((results) => results.flat())
+          : [],
+        storage.getLabourCheckinsByStore
+          ? Promise.all(
+              (await storage.getAllStores()).map((store) =>
+                storage.getLabourCheckinsByStore(store.id),
+              ),
+            ).then((results) => results.flat())
+          : [],
         storage.getFraudLogs(),
         storage.getAllVendors(),
         // Get vehicles for each vendor
-        storage.getAllVendors().then(vendors => 
-          Promise.all(vendors.map(vendor => 
-            storage.getVehicleById ? [] : []
-          ))
-        )
+        storage
+          .getAllVendors()
+          .then((vendors) =>
+            Promise.all(
+              vendors.map((vendor) => (storage.getVehicleById ? [] : [])),
+            ),
+          ),
       ]);
 
       const comprehensiveData = {
         exportInfo: {
           generatedAt: new Date().toISOString(),
           dateRange: { start: start.toISOString(), end: end.toISOString() },
-          totalStores: stores.length
+          totalStores: stores.length,
         },
-        stores: stores.map(store => ({
+        stores: stores.map((store) => ({
           ...store,
-          vehicleCheckins: vehicleCheckins.filter(c => c.storeId === store.id),
-          fsdCheckins: fsdCheckins.filter(c => c.storeId === store.id),
-          supervisorCheckins: supervisorCheckins.filter(c => c.storeId === store.id),
-          labourCheckins: labourCheckins.filter(c => c.storeId === store.id)
+          vehicleCheckins: vehicleCheckins.filter(
+            (c) => c.storeId === store.id,
+          ),
+          fsdCheckins: fsdCheckins.filter((c) => c.storeId === store.id),
+          supervisorCheckins: supervisorCheckins.filter(
+            (c) => c.storeId === store.id,
+          ),
+          labourCheckins: labourCheckins.filter((c) => c.storeId === store.id),
         })),
         summary: {
           totalVehicleCheckins: vehicleCheckins.length,
@@ -559,17 +593,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalSupervisorCheckins: supervisorCheckins.length,
           totalLabourCheckins: labourCheckins.length,
           totalFraudAlerts: fraudLogs.length,
-          storeBreakdown: stores.map(store => ({
+          storeBreakdown: stores.map((store) => ({
             storeId: store.id,
             storeName: store.name,
-            vehicleCount: vehicleCheckins.filter(c => c.storeId === store.id).length,
-            fsdCount: fsdCheckins.filter(c => c.storeId === store.id).length,
-            supervisorCount: supervisorCheckins.filter(c => c.storeId === store.id).length,
-            labourCount: labourCheckins.filter(c => c.storeId === store.id).length
-          }))
+            vehicleCount: vehicleCheckins.filter((c) => c.storeId === store.id)
+              .length,
+            fsdCount: fsdCheckins.filter((c) => c.storeId === store.id).length,
+            supervisorCount: supervisorCheckins.filter(
+              (c) => c.storeId === store.id,
+            ).length,
+            labourCount: labourCheckins.filter((c) => c.storeId === store.id)
+              .length,
+          })),
         },
         vendors,
-        fraudLogs
+        fraudLogs,
       };
 
       if (format === "csv") {
@@ -582,7 +620,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.send(csvData);
       } else if (format === "excel") {
         const excelData = generateComprehensiveExcel(comprehensiveData);
-        res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        res.setHeader(
+          "Content-Type",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        );
         res.setHeader(
           "Content-Disposition",
           'attachment; filename="comprehensive_report.xlsx"',
@@ -593,7 +634,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
     } catch (error) {
       console.error("Comprehensive export error:", error);
-      res.status(500).json({ message: "Error generating comprehensive export" });
+      res
+        .status(500)
+        .json({ message: "Error generating comprehensive export" });
     }
   });
 
@@ -771,6 +814,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/supervisors", async (req, res) => {
     try {
       const supervisorData = supervisorEntrySchema.parse(req.body);
+      //const supervisorData = supervisorCheckinSchema.parse(req.body);
 
       // Check for duplicate Aadhaar number
       const existingSupervisor = await storage.getVendorSupervisorByAadhaar(
@@ -955,11 +999,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/fsd/checkin", async (req, res) => {
     try {
       const checkinData = req.body;
-      
+
       // Check if FSD is already checked in
       const activeFsdCheckins = await storage.getActiveFsdCheckins();
       const existingCheckin = activeFsdCheckins.find(
-        (c) => c.fsdId === checkinData.fsdId && c.storeId === checkinData.storeId
+        (c) =>
+          c.fsdId === checkinData.fsdId && c.storeId === checkinData.storeId,
       );
 
       if (existingCheckin) {
@@ -1008,9 +1053,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/fsd/checkins", async (req, res) => {
     try {
       const { storeId } = req.query;
-      
+
       if (storeId) {
-        const checkins = await storage.getFsdCheckinsByStore(parseInt(storeId as string));
+        const checkins = await storage.getFsdCheckinsByStore(
+          parseInt(storeId as string),
+        );
         res.json(checkins);
       } else {
         const activeCheckins = await storage.getActiveFsdCheckins();
@@ -1026,15 +1073,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/supervisor/checkin", async (req, res) => {
     try {
       const checkinData = supervisorCheckinSchema.parse(req.body);
-      
+
       // Check if supervisor is already checked in
-      const activeSupervisorCheckins = await storage.getActiveSupervisorCheckins();
+      const activeSupervisorCheckins =
+        await storage.getActiveSupervisorCheckins();
       const existingCheckin = activeSupervisorCheckins.find(
-        (c) => c.supervisorId === checkinData.supervisorId && c.storeId === checkinData.storeId
+        (c) =>
+          c.supervisorId === checkinData.supervisorId &&
+          c.storeId === checkinData.storeId,
       );
 
       if (existingCheckin) {
-        return res.status(400).json({ message: "Supervisor is already checked in" });
+        return res
+          .status(400)
+          .json({ message: "Supervisor is already checked in" });
       }
 
       const checkin = await storage.createSupervisorCheckin({
@@ -1045,8 +1097,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Broadcast real-time update
       wsService.broadcastToAll({
-        type: 'supervisor_checkin',
-        data: checkin
+        type: "supervisor_checkin",
+        data: checkin,
       });
 
       res.json(checkin);
@@ -1062,11 +1114,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const checkin = await storage.getSupervisorCheckinById(checkinId);
       if (!checkin) {
-        return res.status(404).json({ message: "Supervisor checkin not found" });
+        return res
+          .status(404)
+          .json({ message: "Supervisor checkin not found" });
       }
 
       if (checkin.status !== "In") {
-        return res.status(400).json({ message: "Supervisor is not checked in" });
+        return res
+          .status(400)
+          .json({ message: "Supervisor is not checked in" });
       }
 
       const updatedCheckin = await storage.updateSupervisorCheckin(checkinId, {
@@ -1076,8 +1132,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Broadcast real-time update
       wsService.broadcastToAll({
-        type: 'supervisor_checkout',
-        data: updatedCheckin
+        type: "supervisor_checkout",
+        data: updatedCheckin,
       });
 
       res.json(updatedCheckin);
@@ -1090,9 +1146,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/supervisor/checkins", async (req, res) => {
     try {
       const { storeId } = req.query;
-      
+
       if (storeId) {
-        const checkins = await storage.getSupervisorCheckinsByStore(parseInt(storeId as string));
+        const checkins = await storage.getSupervisorCheckinsByStore(
+          parseInt(storeId as string),
+        );
         res.json(checkins);
       } else {
         const activeCheckins = await storage.getActiveSupervisorCheckins();
@@ -1108,15 +1166,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/labour/checkin", async (req, res) => {
     try {
       const checkinData = labourCheckinSchema.parse(req.body);
-      
+
       // Check if labour is already checked in
       const activeLabourCheckins = await storage.getActiveLabourCheckins();
       const existingCheckin = activeLabourCheckins.find(
-        (c) => c.loaderId === checkinData.loaderId && c.storeId === checkinData.storeId
+        (c) =>
+          c.loaderId === checkinData.loaderId &&
+          c.storeId === checkinData.storeId,
       );
 
       if (existingCheckin) {
-        return res.status(400).json({ message: "Labour is already checked in" });
+        return res
+          .status(400)
+          .json({ message: "Labour is already checked in" });
       }
 
       const checkin = await storage.createLabourCheckin({
@@ -1127,8 +1189,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Broadcast real-time update
       wsService.broadcastToAll({
-        type: 'labour_checkin',
-        data: checkin
+        type: "labour_checkin",
+        data: checkin,
       });
 
       res.json(checkin);
@@ -1158,8 +1220,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Broadcast real-time update
       wsService.broadcastToAll({
-        type: 'labour_checkout',
-        data: updatedCheckin
+        type: "labour_checkout",
+        data: updatedCheckin,
       });
 
       res.json(updatedCheckin);
@@ -1172,9 +1234,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/labour/checkins", async (req, res) => {
     try {
       const { storeId } = req.query;
-      
+
       if (storeId) {
-        const checkins = await storage.getLabourCheckinsByStore(parseInt(storeId as string));
+        const checkins = await storage.getLabourCheckinsByStore(
+          parseInt(storeId as string),
+        );
         res.json(checkins);
       } else {
         const activeCheckins = await storage.getActiveLabourCheckins();
@@ -1238,29 +1302,33 @@ function generateCSV(data: any[]): string {
 }
 
 function generateExcel(data: any[]): Buffer {
-  const XLSX = require('xlsx');
-  
+  const XLSX = require("xlsx");
+
   if (data.length === 0) {
     // Create empty workbook with headers
-    const worksheet = XLSX.utils.json_to_sheet([{
-      'Vehicle Number': '',
-      'Driver Name': '',
-      'Vendor Name': '',
-      'Store Name': '',
-      'Entry Time': '',
-      'Exit Time': '',
-      'Status': '',
-      'Opening KM': '',
-      'Closing KM': '',
-      'Duration (Hours)': ''
-    }]);
+    const worksheet = XLSX.utils.json_to_sheet([
+      {
+        "Vehicle Number": "",
+        "Driver Name": "",
+        "Vendor Name": "",
+        "Store Name": "",
+        "Entry Time": "",
+        "Exit Time": "",
+        Status: "",
+        "Opening KM": "",
+        "Closing KM": "",
+        "Duration (Hours)": "",
+      },
+    ]);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Vehicle Report');
-    return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Vehicle Report");
+    return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
   }
 
   const excelData = data.map((checkin) => {
-    const entryTime = checkin.createdAt ? new Date(checkin.createdAt).toLocaleString() : "N/A";
+    const entryTime = checkin.createdAt
+      ? new Date(checkin.createdAt).toLocaleString()
+      : "N/A";
     const exitTime = checkin.closingKmTimestamp
       ? new Date(checkin.closingKmTimestamp).toLocaleString()
       : "Not yet";
@@ -1274,82 +1342,102 @@ function generateExcel(data: any[]): Buffer {
       : "Ongoing";
 
     return {
-      'Vehicle Number': checkin.vehicleNumber || "N/A",
-      'Driver Name': checkin.driverName || "N/A",
-      'Vendor Name': checkin.vendorName || "N/A",
-      'Store Name': checkin.storeName || "N/A",
-      'Entry Time': entryTime,
-      'Exit Time': exitTime,
-      'Status': checkin.status || "Unknown",
-      'Opening KM': checkin.openingKm || 0,
-      'Closing KM': checkin.closingKm || "N/A",
-      'Duration (Hours)': duration,
+      "Vehicle Number": checkin.vehicleNumber || "N/A",
+      "Driver Name": checkin.driverName || "N/A",
+      "Vendor Name": checkin.vendorName || "N/A",
+      "Store Name": checkin.storeName || "N/A",
+      "Entry Time": entryTime,
+      "Exit Time": exitTime,
+      Status: checkin.status || "Unknown",
+      "Opening KM": checkin.openingKm || 0,
+      "Closing KM": checkin.closingKm || "N/A",
+      "Duration (Hours)": duration,
     };
   });
 
   const worksheet = XLSX.utils.json_to_sheet(excelData);
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Vehicle Report');
-  
-  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Vehicle Report");
+
+  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 }
 
 function generateComprehensiveExcel(data: any): Buffer {
-  const XLSX = require('xlsx');
+  const XLSX = require("xlsx");
   const workbook = XLSX.utils.book_new();
 
   // Summary Sheet
   const summaryData = [
-    ['Export Information'],
-    ['Generated At', data.exportInfo.generatedAt],
-    ['Date Range', `${data.exportInfo.dateRange.start} to ${data.exportInfo.dateRange.end}`],
-    ['Total Stores', data.exportInfo.totalStores],
+    ["Export Information"],
+    ["Generated At", data.exportInfo.generatedAt],
+    [
+      "Date Range",
+      `${data.exportInfo.dateRange.start} to ${data.exportInfo.dateRange.end}`,
+    ],
+    ["Total Stores", data.exportInfo.totalStores],
     [],
-    ['Summary'],
-    ['Total Vehicle Checkins', data.summary.totalVehicleCheckins],
-    ['Total FSD Checkins', data.summary.totalFsdCheckins],
-    ['Total Supervisor Checkins', data.summary.totalSupervisorCheckins],
-    ['Total Labour Checkins', data.summary.totalLabourCheckins],
-    ['Total Fraud Alerts', data.summary.totalFraudAlerts],
+    ["Summary"],
+    ["Total Vehicle Checkins", data.summary.totalVehicleCheckins],
+    ["Total FSD Checkins", data.summary.totalFsdCheckins],
+    ["Total Supervisor Checkins", data.summary.totalSupervisorCheckins],
+    ["Total Labour Checkins", data.summary.totalLabourCheckins],
+    ["Total Fraud Alerts", data.summary.totalFraudAlerts],
   ];
   const summaryWorksheet = XLSX.utils.aoa_to_sheet(summaryData);
-  XLSX.utils.book_append_sheet(workbook, summaryWorksheet, 'Summary');
+  XLSX.utils.book_append_sheet(workbook, summaryWorksheet, "Summary");
 
   // Store Breakdown Sheet
   const storeBreakdownData = [
-    ['Store ID', 'Store Name', 'Vehicle Checkins', 'FSD Checkins', 'Supervisor Checkins', 'Labour Checkins'],
+    [
+      "Store ID",
+      "Store Name",
+      "Vehicle Checkins",
+      "FSD Checkins",
+      "Supervisor Checkins",
+      "Labour Checkins",
+    ],
     ...data.summary.storeBreakdown.map((store: any) => [
       store.storeId,
       store.storeName,
       store.vehicleCount,
       store.fsdCount,
       store.supervisorCount,
-      store.labourCount
-    ])
+      store.labourCount,
+    ]),
   ];
   const storeBreakdownWorksheet = XLSX.utils.aoa_to_sheet(storeBreakdownData);
-  XLSX.utils.book_append_sheet(workbook, storeBreakdownWorksheet, 'Store Breakdown');
+  XLSX.utils.book_append_sheet(
+    workbook,
+    storeBreakdownWorksheet,
+    "Store Breakdown",
+  );
 
   // Vehicle Checkins Sheet
   const vehicleCheckins = [];
   data.stores.forEach((store: any) => {
     store.vehicleCheckins.forEach((checkin: any) => {
       vehicleCheckins.push({
-        'Store': store.name,
-        'Vehicle Number': checkin.vehicleNumber,
-        'Driver Name': checkin.driverName,
-        'Vendor': checkin.vendorName,
-        'Entry Time': new Date(checkin.createdAt).toLocaleString(),
-        'Exit Time': checkin.closingKmTimestamp ? new Date(checkin.closingKmTimestamp).toLocaleString() : 'Not yet',
-        'Status': checkin.status,
-        'Opening KM': checkin.openingKm || 0,
-        'Closing KM': checkin.closingKm || 0
+        Store: store.name,
+        "Vehicle Number": checkin.vehicleNumber,
+        "Driver Name": checkin.driverName,
+        Vendor: checkin.vendorName,
+        "Entry Time": new Date(checkin.createdAt).toLocaleString(),
+        "Exit Time": checkin.closingKmTimestamp
+          ? new Date(checkin.closingKmTimestamp).toLocaleString()
+          : "Not yet",
+        Status: checkin.status,
+        "Opening KM": checkin.openingKm || 0,
+        "Closing KM": checkin.closingKm || 0,
       });
     });
   });
   if (vehicleCheckins.length > 0) {
     const vehicleWorksheet = XLSX.utils.json_to_sheet(vehicleCheckins);
-    XLSX.utils.book_append_sheet(workbook, vehicleWorksheet, 'Vehicle Checkins');
+    XLSX.utils.book_append_sheet(
+      workbook,
+      vehicleWorksheet,
+      "Vehicle Checkins",
+    );
   }
 
   // FSD Checkins Sheet
@@ -1357,19 +1445,21 @@ function generateComprehensiveExcel(data: any): Buffer {
   data.stores.forEach((store: any) => {
     store.fsdCheckins.forEach((checkin: any) => {
       fsdCheckins.push({
-        'Store': store.name,
-        'Name': checkin.name,
-        'Designation': checkin.designation,
-        'Checkin Time': new Date(checkin.checkinTime).toLocaleString(),
-        'Checkout Time': checkin.checkoutTime ? new Date(checkin.checkoutTime).toLocaleString() : 'Not yet',
-        'Status': checkin.status,
-        'Phone Number': checkin.phoneNumber || 'N/A'
+        Store: store.name,
+        Name: checkin.name,
+        Designation: checkin.designation,
+        "Checkin Time": new Date(checkin.checkinTime).toLocaleString(),
+        "Checkout Time": checkin.checkoutTime
+          ? new Date(checkin.checkoutTime).toLocaleString()
+          : "Not yet",
+        Status: checkin.status,
+        "Phone Number": checkin.phoneNumber || "N/A",
       });
     });
   });
   if (fsdCheckins.length > 0) {
     const fsdWorksheet = XLSX.utils.json_to_sheet(fsdCheckins);
-    XLSX.utils.book_append_sheet(workbook, fsdWorksheet, 'FSD Checkins');
+    XLSX.utils.book_append_sheet(workbook, fsdWorksheet, "FSD Checkins");
   }
 
   // Supervisor Checkins Sheet
@@ -1377,19 +1467,27 @@ function generateComprehensiveExcel(data: any): Buffer {
   data.stores.forEach((store: any) => {
     store.supervisorCheckins.forEach((checkin: any) => {
       supervisorCheckins.push({
-        'Store': store.name,
-        'Name': checkin.name,
-        'Checkin Time': new Date(checkin.checkinTime).toLocaleString(),
-        'Checkout Time': checkin.checkoutTime ? new Date(checkin.checkoutTime).toLocaleString() : 'Not yet',
-        'Status': checkin.status,
-        'Phone Number': checkin.phoneNumber || 'N/A',
-        'Aadhaar': checkin.aadhaarNumber ? `****-****-${checkin.aadhaarNumber.slice(-4)}` : 'N/A'
+        Store: store.name,
+        Name: checkin.name,
+        "Checkin Time": new Date(checkin.checkinTime).toLocaleString(),
+        "Checkout Time": checkin.checkoutTime
+          ? new Date(checkin.checkoutTime).toLocaleString()
+          : "Not yet",
+        Status: checkin.status,
+        "Phone Number": checkin.phoneNumber || "N/A",
+        Aadhaar: checkin.aadhaarNumber
+          ? `****-****-${checkin.aadhaarNumber.slice(-4)}`
+          : "N/A",
       });
     });
   });
   if (supervisorCheckins.length > 0) {
     const supervisorWorksheet = XLSX.utils.json_to_sheet(supervisorCheckins);
-    XLSX.utils.book_append_sheet(workbook, supervisorWorksheet, 'Supervisor Checkins');
+    XLSX.utils.book_append_sheet(
+      workbook,
+      supervisorWorksheet,
+      "Supervisor Checkins",
+    );
   }
 
   // Labour Checkins Sheet
@@ -1397,41 +1495,47 @@ function generateComprehensiveExcel(data: any): Buffer {
   data.stores.forEach((store: any) => {
     store.labourCheckins.forEach((checkin: any) => {
       labourCheckins.push({
-        'Store': store.name,
-        'Name': checkin.name,
-        'Checkin Time': new Date(checkin.checkinTime).toLocaleString(),
-        'Checkout Time': checkin.checkoutTime ? new Date(checkin.checkoutTime).toLocaleString() : 'Not yet',
-        'Status': checkin.status,
-        'Phone Number': checkin.phoneNumber || 'N/A',
-        'Aadhaar': checkin.aadhaarNumber ? `****-****-${checkin.aadhaarNumber.slice(-4)}` : 'N/A'
+        Store: store.name,
+        Name: checkin.name,
+        "Checkin Time": new Date(checkin.checkinTime).toLocaleString(),
+        "Checkout Time": checkin.checkoutTime
+          ? new Date(checkin.checkoutTime).toLocaleString()
+          : "Not yet",
+        Status: checkin.status,
+        "Phone Number": checkin.phoneNumber || "N/A",
+        Aadhaar: checkin.aadhaarNumber
+          ? `****-****-${checkin.aadhaarNumber.slice(-4)}`
+          : "N/A",
       });
     });
   });
   if (labourCheckins.length > 0) {
     const labourWorksheet = XLSX.utils.json_to_sheet(labourCheckins);
-    XLSX.utils.book_append_sheet(workbook, labourWorksheet, 'Labour Checkins');
+    XLSX.utils.book_append_sheet(workbook, labourWorksheet, "Labour Checkins");
   }
 
   // Fraud Logs Sheet
   if (data.fraudLogs.length > 0) {
     const fraudData = data.fraudLogs.map((fraud: any) => ({
-      'Fraud Type': fraud.fraudType,
-      'Description': fraud.description,
-      'Severity': fraud.severity,
-      'Created At': new Date(fraud.createdAt).toLocaleString(),
-      'Resolved': fraud.isResolved ? 'Yes' : 'No',
-      'Resolved At': fraud.resolvedAt ? new Date(fraud.resolvedAt).toLocaleString() : 'N/A'
+      "Fraud Type": fraud.fraudType,
+      Description: fraud.description,
+      Severity: fraud.severity,
+      "Created At": new Date(fraud.createdAt).toLocaleString(),
+      Resolved: fraud.isResolved ? "Yes" : "No",
+      "Resolved At": fraud.resolvedAt
+        ? new Date(fraud.resolvedAt).toLocaleString()
+        : "N/A",
     }));
     const fraudWorksheet = XLSX.utils.json_to_sheet(fraudData);
-    XLSX.utils.book_append_sheet(workbook, fraudWorksheet, 'Fraud Alerts');
+    XLSX.utils.book_append_sheet(workbook, fraudWorksheet, "Fraud Alerts");
   }
 
-  return XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+  return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
 }
 
 function generateComprehensiveCSV(data: any): string {
   let csvContent = "";
-  
+
   // Export Info
   csvContent += "EXPORT INFORMATION\n";
   csvContent += `Generated At,${data.exportInfo.generatedAt}\n`;
@@ -1448,7 +1552,8 @@ function generateComprehensiveCSV(data: any): string {
 
   // Store Breakdown
   csvContent += "STORE BREAKDOWN\n";
-  csvContent += "Store ID,Store Name,Vehicle Checkins,FSD Checkins,Supervisor Checkins,Labour Checkins\n";
+  csvContent +=
+    "Store ID,Store Name,Vehicle Checkins,FSD Checkins,Supervisor Checkins,Labour Checkins\n";
   data.summary.storeBreakdown.forEach((store: any) => {
     csvContent += `${store.storeId},"${store.storeName}",${store.vehicleCount},${store.fsdCount},${store.supervisorCount},${store.labourCount}\n`;
   });
@@ -1456,11 +1561,14 @@ function generateComprehensiveCSV(data: any): string {
 
   // Vehicle Checkins
   csvContent += "VEHICLE CHECKINS\n";
-  csvContent += "Store,Vehicle Number,Driver Name,Vendor,Entry Time,Exit Time,Status,Opening KM,Closing KM\n";
+  csvContent +=
+    "Store,Vehicle Number,Driver Name,Vendor,Entry Time,Exit Time,Status,Opening KM,Closing KM\n";
   data.stores.forEach((store: any) => {
     store.vehicleCheckins.forEach((checkin: any) => {
       const entryTime = new Date(checkin.createdAt).toLocaleString();
-      const exitTime = checkin.closingKmTimestamp ? new Date(checkin.closingKmTimestamp).toLocaleString() : "Not yet";
+      const exitTime = checkin.closingKmTimestamp
+        ? new Date(checkin.closingKmTimestamp).toLocaleString()
+        : "Not yet";
       csvContent += `"${store.name}","${checkin.vehicleNumber}","${checkin.driverName}","${checkin.vendorName}","${entryTime}","${exitTime}","${checkin.status}",${checkin.openingKm || 0},${checkin.closingKm || 0}\n`;
     });
   });
@@ -1468,38 +1576,51 @@ function generateComprehensiveCSV(data: any): string {
 
   // FSD Checkins
   csvContent += "FSD CHECKINS\n";
-  csvContent += "Store,Name,Designation,Checkin Time,Checkout Time,Status,Phone Number\n";
+  csvContent +=
+    "Store,Name,Designation,Checkin Time,Checkout Time,Status,Phone Number\n";
   data.stores.forEach((store: any) => {
     store.fsdCheckins.forEach((checkin: any) => {
       const checkinTime = new Date(checkin.checkinTime).toLocaleString();
-      const checkoutTime = checkin.checkoutTime ? new Date(checkin.checkoutTime).toLocaleString() : "Not yet";
-      csvContent += `"${store.name}","${checkin.name}","${checkin.designation}","${checkinTime}","${checkoutTime}","${checkin.status}","${checkin.phoneNumber || 'N/A'}"\n`;
+      const checkoutTime = checkin.checkoutTime
+        ? new Date(checkin.checkoutTime).toLocaleString()
+        : "Not yet";
+      csvContent += `"${store.name}","${checkin.name}","${checkin.designation}","${checkinTime}","${checkoutTime}","${checkin.status}","${checkin.phoneNumber || "N/A"}"\n`;
     });
   });
   csvContent += "\n";
 
   // Supervisor Checkins
   csvContent += "SUPERVISOR CHECKINS\n";
-  csvContent += "Store,Name,Checkin Time,Checkout Time,Status,Phone Number,Aadhaar\n";
+  csvContent +=
+    "Store,Name,Checkin Time,Checkout Time,Status,Phone Number,Aadhaar\n";
   data.stores.forEach((store: any) => {
     store.supervisorCheckins.forEach((checkin: any) => {
       const checkinTime = new Date(checkin.checkinTime).toLocaleString();
-      const checkoutTime = checkin.checkoutTime ? new Date(checkin.checkoutTime).toLocaleString() : "Not yet";
-      const maskedAadhaar = checkin.aadhaarNumber ? `****-****-${checkin.aadhaarNumber.slice(-4)}` : 'N/A';
-      csvContent += `"${store.name}","${checkin.name}","${checkinTime}","${checkoutTime}","${checkin.status}","${checkin.phoneNumber || 'N/A'}","${maskedAadhaar}"\n`;
+      const checkoutTime = checkin.checkoutTime
+        ? new Date(checkin.checkoutTime).toLocaleString()
+        : "Not yet";
+      const maskedAadhaar = checkin.aadhaarNumber
+        ? `****-****-${checkin.aadhaarNumber.slice(-4)}`
+        : "N/A";
+      csvContent += `"${store.name}","${checkin.name}","${checkinTime}","${checkoutTime}","${checkin.status}","${checkin.phoneNumber || "N/A"}","${maskedAadhaar}"\n`;
     });
   });
   csvContent += "\n";
 
   // Labour Checkins
   csvContent += "LABOUR CHECKINS\n";
-  csvContent += "Store,Name,Checkin Time,Checkout Time,Status,Phone Number,Aadhaar\n";
+  csvContent +=
+    "Store,Name,Checkin Time,Checkout Time,Status,Phone Number,Aadhaar\n";
   data.stores.forEach((store: any) => {
     store.labourCheckins.forEach((checkin: any) => {
       const checkinTime = new Date(checkin.checkinTime).toLocaleString();
-      const checkoutTime = checkin.checkoutTime ? new Date(checkin.checkoutTime).toLocaleString() : "Not yet";
-      const maskedAadhaar = checkin.aadhaarNumber ? `****-****-${checkin.aadhaarNumber.slice(-4)}` : 'N/A';
-      csvContent += `"${store.name}","${checkin.name}","${checkinTime}","${checkoutTime}","${checkin.status}","${checkin.phoneNumber || 'N/A'}","${maskedAadhaar}"\n`;
+      const checkoutTime = checkin.checkoutTime
+        ? new Date(checkin.checkoutTime).toLocaleString()
+        : "Not yet";
+      const maskedAadhaar = checkin.aadhaarNumber
+        ? `****-****-${checkin.aadhaarNumber.slice(-4)}`
+        : "N/A";
+      csvContent += `"${store.name}","${checkin.name}","${checkinTime}","${checkoutTime}","${checkin.status}","${checkin.phoneNumber || "N/A"}","${maskedAadhaar}"\n`;
     });
   });
   csvContent += "\n";
@@ -1507,11 +1628,14 @@ function generateComprehensiveCSV(data: any): string {
   // Fraud Logs
   if (data.fraudLogs.length > 0) {
     csvContent += "FRAUD ALERTS\n";
-    csvContent += "Fraud Type,Description,Severity,Created At,Resolved,Resolved At\n";
+    csvContent +=
+      "Fraud Type,Description,Severity,Created At,Resolved,Resolved At\n";
     data.fraudLogs.forEach((fraud: any) => {
       const createdAt = new Date(fraud.createdAt).toLocaleString();
-      const resolvedAt = fraud.resolvedAt ? new Date(fraud.resolvedAt).toLocaleString() : "N/A";
-      csvContent += `"${fraud.fraudType}","${fraud.description}","${fraud.severity}","${createdAt}","${fraud.isResolved ? 'Yes' : 'No'}","${resolvedAt}"\n`;
+      const resolvedAt = fraud.resolvedAt
+        ? new Date(fraud.resolvedAt).toLocaleString()
+        : "N/A";
+      csvContent += `"${fraud.fraudType}","${fraud.description}","${fraud.severity}","${createdAt}","${fraud.isResolved ? "Yes" : "No"}","${resolvedAt}"\n`;
     });
   }
 

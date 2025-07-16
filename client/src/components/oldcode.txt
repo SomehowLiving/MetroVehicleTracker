@@ -1,0 +1,482 @@
+
+{/* Supervisor Management Section */}
+{activeSection === "supervisor" && (
+  <Card>
+    <CardHeader>
+      <CardTitle className="text-xl">Supervisor Management</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>
+            {getFieldLabel("Vendor", "vendorId", supervisorFormSchema)}
+          </Label>
+          <Select
+            value={supervisorForm.watch("vendorId")}
+            onValueChange={(value) => {
+              supervisorForm.setValue("vendorId", value);
+              setSupervisorVendorId(parseInt(value));
+            }}
+          >
+            <SelectTrigger
+              className={
+                supervisorForm.formState.errors.vendorId
+                  ? "border-red-500"
+                  : ""
+              }
+            >
+              <SelectValue placeholder="Select a vendor" />
+            </SelectTrigger>
+            <SelectContent>
+              {vendors?.map((vendor: any) => (
+                <SelectItem
+                  key={vendor.id}
+                  value={vendor.id.toString()}
+                >
+                  {vendor.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {supervisorForm.formState.errors.vendorId && (
+            <p className="text-sm text-red-500">
+              {supervisorForm.formState.errors.vendorId.message}
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>
+              {getFieldLabel(
+                "Supervisor Name",
+                "name",
+                supervisorFormSchema,
+              )}
+            </Label>
+            <Input
+              placeholder="Supervisor's full name"
+              value={supervisorForm.watch("name")}
+              onChange={(e) => {
+                supervisorForm.setValue("name", e.target.value);
+                setSupervisorName(e.target.value);
+              }}
+              className={
+                supervisorForm.formState.errors.name
+                  ? "border-red-500"
+                  : ""
+              }
+            />
+            {supervisorForm.formState.errors.name && (
+              <p className="text-sm text-red-500">
+                {supervisorForm.formState.errors.name.message}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>
+              {getFieldLabel(
+                "Aadhaar Number",
+                "aadhaarNumber",
+                supervisorFormSchema,
+              )}
+            </Label>
+            <Input
+              placeholder="123456789012"
+              maxLength={12}
+              value={supervisorForm.watch("aadhaarNumber")}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, "");
+                supervisorForm.setValue("aadhaarNumber", value);
+                setSupervisorAadhaar(value);
+              }}
+              className={
+                supervisorForm.formState.errors.aadhaarNumber
+                  ? "border-red-500"
+                  : ""
+              }
+            />
+            {supervisorForm.formState.errors.aadhaarNumber && (
+              <p className="text-sm text-red-500">
+                {supervisorForm.formState.errors.aadhaarNumber.message}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>
+              {getFieldLabel(
+                "Phone Number",
+                "phoneNumber",
+                supervisorFormSchema,
+              )}
+            </Label>
+            <Input
+              placeholder="Phone number"
+              value={supervisorForm.watch("phoneNumber")}
+              onChange={(e) => {
+                supervisorForm.setValue("phoneNumber", e.target.value);
+                setSupervisorPhone(e.target.value);
+              }}
+              className={
+                supervisorForm.formState.errors.phoneNumber
+                  ? "border-red-500"
+                  : ""
+              }
+            />
+            {supervisorForm.formState.errors.phoneNumber && (
+              <p className="text-sm text-red-500">
+                {supervisorForm.formState.errors.phoneNumber.message}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Supervisor Photo Section - Optional */}
+        <div className="space-y-2">
+          <Label>Supervisor Photo</Label>
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+            {photos.supervisor ? (
+              <div className="space-y-2">
+                <img
+                  src={photos.supervisor}
+                  alt="Supervisor"
+                  className="w-32 h-32 object-cover rounded-lg mx-auto"
+                />
+                <Badge variant="secondary">Photo captured</Badge>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Camera className="h-12 w-12 text-gray-400 mx-auto" />
+                <p className="text-sm text-gray-600">
+                  Click to capture supervisor photo
+                </p>
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => openCamera("supervisor")}
+              className="mt-2"
+            >
+              <Camera className="mr-2 h-4 w-4" />
+              {photos.supervisor ? "Retake Photo" : "Capture Photo"}
+            </Button>
+          </div>
+        </div>
+
+        <Button
+          onClick={handleSupervisorSubmit}
+          disabled={supervisorMutation.isPending}
+          className="w-full"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          Add Supervisor
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+)}
+
+{/* Loader Management Section */}
+{activeSection === "loader" && (
+  <Card>
+    <CardHeader>
+      <CardTitle className="text-xl">Loader Management</CardTitle>
+    </CardHeader>
+    <CardContent>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label>
+            {getFieldLabel("Vendor", "vendorId", loaderFormSchema)}
+          </Label>
+          <Select
+            value={loaderForm.watch("vendorId")}
+            onValueChange={(value) => {
+              loaderForm.setValue("vendorId", value);
+              setLoaderVendorId(parseInt(value));
+            }}
+          >
+            <SelectTrigger
+              className={
+                loaderForm.formState.errors.vendorId
+                  ? "border-red-500"
+                  : ""
+              }
+            >
+              <SelectValue placeholder="Select a vendor" />
+            </SelectTrigger>
+            <SelectContent>
+              {vendors?.map((vendor: any) => (
+                <SelectItem
+                  key={vendor.id}
+                  value={vendor.id.toString()}
+                >
+                  {vendor.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {loaderForm.formState.errors.vendorId && (
+            <p className="text-sm text-red-500">
+              {loaderForm.formState.errors.vendorId.message}
+            </p>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>
+              {getFieldLabel("Loader Name", "name", loaderFormSchema)}
+            </Label>
+            <Input
+              placeholder="Loader's full name"
+              value={loaderForm.watch("name")}
+              onChange={(e) => {
+                loaderForm.setValue("name", e.target.value);
+                setLoaderName(e.target.value);
+              }}
+              className={
+                loaderForm.formState.errors.name ? "border-red-500" : ""
+              }
+            />
+            {loaderForm.formState.errors.name && (
+              <p className="text-sm text-red-500">
+                {loaderForm.formState.errors.name.message}
+              </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>
+              {getFieldLabel(
+                "Aadhaar Number",
+                "aadhaarNumber",
+                loaderFormSchema,
+              )}
+            </Label>
+            <Input
+              placeholder="123456789012"
+              maxLength={12}
+              value={loaderForm.watch("aadhaarNumber")}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, "");
+                loaderForm.setValue("aadhaarNumber", value);
+                setLoaderAadhaar(value);
+              }}
+              className={
+                loaderForm.formState.errors.aadhaarNumber
+                  ? "border-red-500"
+                  : ""
+              }
+            />
+            {loaderForm.formState.errors.aadhaarNumber && (
+              <p className="text-sm text-red-500">
+                {loaderForm.formState.errors.aadhaarNumber.message}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label>
+              {getFieldLabel(
+                "Phone Number",
+                "phoneNumber",
+                loaderFormSchema,
+              )}
+            </Label>
+            <Input
+              placeholder="Phone number"
+              value={loaderForm.watch("phoneNumber")}
+              onChange={(e) => {
+                loaderForm.setValue("phoneNumber", e.target.value);
+                setLoaderPhone(e.target.value);
+              }}
+              className={
+                loaderForm.formState.errors.phoneNumber
+                  ? "border-red-500"
+                  : ""
+              }
+            />
+            {loaderForm.formState.errors.phoneNumber && (
+              <p className="text-sm text-red-500">
+                {loaderForm.formState.errors.phoneNumber.message}
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Loader Photo Section - Optional */}
+        <div className="space-y-2">
+          <Label>Loader Photo</Label>
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+            {photos.loader ? (
+              <div className="space-y-2">
+                <img
+                  src={photos.loader}
+                  alt="Loader"
+                  className="w-32 h-32 object-cover rounded-lg mx-auto"
+                />
+                <Badge variant="secondary">Photo captured</Badge>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Camera className="h-12 w-12 text-gray-400 mx-auto" />
+                <p className="text-sm text-gray-600">
+                  Click to capture loader photo
+                </p>
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => openCamera("loader")}
+              className="mt-2"
+            >
+              <Camera className="mr-2 h-4 w-4" />
+              {photos.loader ? "Retake Photo" : "Capture Photo"}
+            </Button>
+          </div>
+        </div>
+
+        <Button
+          onClick={handleLoaderSubmit}
+          disabled={loaderMutation.isPending}
+          className="w-full"
+        >
+          <Save className="h-4 w-4 mr-2" />
+          Add Loader
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
+)}
+
+
+
+
+
+
+
+
+//-------------fsd attendence--------------
+
+<Card>
+  <CardHeader>
+    <CardTitle className="text-lg flex items-center space-x-2">
+      {isCheckedIn ? (
+        <UserCheck className="h-5 w-5 text-green-600" />
+      ) : (
+        <UserX className="h-5 w-5 text-gray-400" />
+      )}
+      <span>Supervisor Check-in</span>
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    {!isCheckedIn ? (
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="name">Full Name*</Label>
+          <Input
+            id="name"
+            value={fsdForm.name}
+            onChange={(e) => setFsdForm({ ...fsdForm, name: e.target.value })}
+            placeholder="Enter your full name"
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="aadhaar">Aadhaar Number</Label>
+          <Input
+            id="aadhaar"
+            value={fsdForm.aadhaarNumber}
+            onChange={(e) => {
+              const value = e.target.value.replace(/\D/g, '').slice(0, 12);
+              setFsdForm({ ...fsdForm, aadhaarNumber: value });
+            }}
+            placeholder="12-digit Aadhaar number"
+            maxLength={12}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="phone">Phone Number</Label>
+          <Input
+            id="phone"
+            value={fsdForm.phoneNumber}
+            onChange={(e) => {
+              const value = e.target.value.replace(/\D/g, '').slice(0, 10);
+              setFsdForm({ ...fsdForm, phoneNumber: value });
+            }}
+            placeholder="10-digit phone number"
+            maxLength={10}
+          />
+        </div>
+
+        <Button
+          onClick={() => checkinMutation.mutate()}
+          disabled={checkinMutation.isPending || !fsdForm.name.trim()}
+          className="w-full bg-green-600 hover:bg-green-700"
+        >
+          {checkinMutation.isPending ? "Checking In..." : "Check In"}
+        </Button>
+      </div>
+    ) : (
+      <div className="space-y-4">
+        <div className="text-center">
+          <Badge className="bg-green-600 text-white">
+            <CheckCircle className="mr-1 h-3 w-3" />
+            Checked In
+          </Badge>
+        </div>
+
+        <div className="space-y-2 text-sm">
+          <div><strong>Name:</strong> {fsdForm.name}</div>
+          {fsdForm.aadhaarNumber && (
+            <div><strong>Aadhaar:</strong> ****-****-{fsdForm.aadhaarNumber.slice(-4)}</div>
+          )}
+          {fsdForm.phoneNumber && (
+            <div><strong>Phone:</strong> {fsdForm.phoneNumber}</div>
+          )}
+        </div>
+
+        <Button
+          onClick={() => checkoutMutation.mutate()}
+          disabled={checkoutMutation.isPending}
+          variant="destructive"
+          className="w-full"
+        >
+          {checkoutMutation.isPending ? "Checking Out..." : "Check Out"}
+        </Button>
+      </div>
+    )}
+  </CardContent>
+</Card>
+
+// Check if current user is already checked in
+useEffect(() => {
+  if (activeFsdCheckins && user) {
+    const userCheckin = activeFsdCheckins.find(
+      (checkin: any) => checkin.fsdId === user.id && checkin.status === "In"
+    );
+    if (userCheckin) {
+      setIsCheckedIn(true);
+      setCheckinId(userCheckin.id);
+    }
+  }
+}, [activeFsdCheckins, user]);
+
+
+// Check if user is already checked in
+const { data: activeFsdCheckins } = useQuery({
+  queryKey: ["/api/fsd/checkins", user?.storeId],
+  queryFn: async () => {
+    const res = await fetch(`/api/fsd/checkins?storeId=${user?.storeId}`);
+    return res.json();
+  },
+  enabled: !!user?.storeId,
+});

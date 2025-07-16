@@ -202,12 +202,6 @@ export default function GateOperator() {
             </Card>
           </div>
         </div>
-
-        {/* Supervisor and Labour Check-in Forms */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-          <SupervisorCheckinForm storeId={user.storeId} operatorId={user.id} />
-          <LabourCheckinForm storeId={user.storeId} operatorId={user.id} />
-        </div>
       </main>
     </div>
   );
