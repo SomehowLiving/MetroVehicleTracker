@@ -290,6 +290,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Enhanced API endpoint (add this to your backend)
+  app.get("/api/vehicles/active", async (req, res) => {
+    try {
+      // Get storeId from query params if needed
+      const storeId = req.query.storeId
+        ? parseInt(req.query.storeId as string)
+        : undefined;
+
+      // Get all vehicles with status "In"
+      const activeVehicles = await storage.getActiveVehicles(storeId);
+
+      // Debug: Log what we're returning
+      console.log("Active vehicles from DB:", activeVehicles);
+
+      // The data is already properly formatted from Drizzle
+      res.json(activeVehicles);
+    } catch (error) {
+      console.error("Error fetching active vehicles:", error);
+      res.status(500).json({ message: "Error fetching active vehicles" });
+    }
+  });
+
   // Dashboard routes
   app.get("/api/dashboard/kpis", async (req, res) => {
     try {
@@ -448,7 +470,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { storeId } = req.query;
       const storeIdNum = storeId ? parseInt(storeId as string) : undefined;
-
       // Get store vehicle counts using your existing storage method
       const storeVehicleCounts = await storage.getStoreVehicleCounts();
 
@@ -1168,11 +1189,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const checkinData = labourCheckinSchema.parse(req.body);
 
       // Check if labour is already checked in
-      const activeLabourCheckins = await storage.getActiveLabourCheckins();
+      // const activeLabourCheckins = await storage.getActiveLabourCheckins();
+      // const existingCheckin = activeLabourCheckins.find(
+      //   (c) =>
+      //     c.loaderId === checkinData.loaderId &&
+      //     c.storeId === checkinData.storeId,
+      // );
+      // const existingCheckin = activeLabourCheckins.find(
+      //   (c) => c.aadhaarNumber === checkinData.aadhaarNumber
+      // );
+      const activeLabourCheckins = await storage.getActiveLabourCheckins(
+        checkinData.storeId,
+      );
       const existingCheckin = activeLabourCheckins.find(
-        (c) =>
-          c.loaderId === checkinData.loaderId &&
-          c.storeId === checkinData.storeId,
+        (c) => c.aadhaarNumber === checkinData.aadhaarNumber,
       );
 
       if (existingCheckin) {
@@ -1252,6 +1282,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   return httpServer;
 }
+
 function generateCSV(data: any[]): string {
   if (data.length === 0) return "";
 

@@ -35,7 +35,7 @@ export function VehicleTable({ refreshKey, storeId }: VehicleTableProps) {
   const { data: vehicles, isLoading } = useQuery({
     queryKey: ["/api/dashboard/active-vehicles", storeId, refreshKey],
     queryFn: async () => {
-      const baseUrl = storeId 
+      const baseUrl = storeId
         ? `/api/dashboard/active-vehicles?storeId=${storeId}&includeAll=true`
         : "/api/dashboard/active-vehicles?includeAll=true";
       const res = await fetch(baseUrl);
@@ -61,7 +61,9 @@ export function VehicleTable({ refreshKey, storeId }: VehicleTableProps) {
       vehicle.vehicleNumber
         ?.toLowerCase()
         .includes(filters.search.toLowerCase()) ||
-      vehicle.driverName?.toLowerCase().includes(filters.search.toLowerCase()) ||
+      vehicle.driverName
+        ?.toLowerCase()
+        .includes(filters.search.toLowerCase()) ||
       vehicle.vendorName?.toLowerCase().includes(filters.search.toLowerCase());
 
     return matchesStore && matchesStatus && matchesSearch;
@@ -165,7 +167,8 @@ export function VehicleTable({ refreshKey, storeId }: VehicleTableProps) {
           </TableHeader>
           <TableBody>
             {filteredVehicles && filteredVehicles.length > 0 ? (
-              filteredVehicles.map((vehicle: any) => (
+              // filteredVehicles.map((vehicle: any) => (
+              filteredVehicles.slice(0, 10).map((vehicle: any) => (
                 <TableRow key={vehicle.id}>
                   <TableCell>
                     <div className="flex items-center space-x-3">

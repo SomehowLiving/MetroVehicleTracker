@@ -339,11 +339,11 @@ export default function FsdDashboard() {
             {/* Quick Actions */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg">Quick Actions</CardTitle>
+                <CardTitle className="text-lg">Quick Action</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="space-y-2">
-                  <Input
+                  {/* <Input
                     placeholder="Search Vehicle..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -352,7 +352,7 @@ export default function FsdDashboard() {
                   <Button variant="outline" size="sm" className="w-full">
                     <Search className="h-4 w-4 mr-2" />
                     Search Vehicle
-                  </Button>
+                  </Button> */}
                 </div>
                 <Button
                   variant="outline"
@@ -364,10 +364,10 @@ export default function FsdDashboard() {
                   <Download className="h-4 w-4 mr-2" />
                   Download Report
                 </Button>
-                <Button variant="outline" size="sm" className="w-full">
+                {/* <Button variant="outline" size="sm" className="w-full">
                   <History className="h-4 w-4 mr-2" />
                   View History
-                </Button>
+                </Button> */}
               </CardContent>
             </Card>
           </div>

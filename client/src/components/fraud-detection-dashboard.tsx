@@ -44,11 +44,17 @@ export function FraudDetectionDashboard({
 
   const { data: fraudStats } = useQuery({
     queryKey: ["/api/fraud/stats", refreshKey],
+    // queryFn: async () => {
+    //   const res = await fetch("/api/fraud/stats");
+    //   return res.json();
+    // },
     queryFn: async () => {
+      console.log("🔄 Fetching /api/fraud/stats");
       const res = await fetch("/api/fraud/stats");
+      if (!res.ok) throw new Error("Failed to fetch stats");
       return res.json();
     },
-  });
+    });
 
   const { data: recentAlerts } = useQuery({
     queryKey: ["/api/fraud/alerts", refreshKey],
@@ -351,8 +357,8 @@ export function FraudDetectionDashboard({
                     </TableCell>
                     <TableCell>
                       <div className="font-mono text-sm">
-                        <div>Open: {checkin.openingKm || 'N/A'}</div>
-                        <div>Close: {checkin.closingKm || 'N/A'}</div>
+                        <div>Open: {checkin.openingKm || "N/A"}</div>
+                        <div>Close: {checkin.closingKm || "N/A"}</div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -363,7 +369,7 @@ export function FraudDetectionDashboard({
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        {checkin.supervisorName || 'N/A'}
+                        {checkin.supervisorName || "N/A"}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -373,11 +379,7 @@ export function FraudDetectionDashboard({
                     </TableCell>
                     <TableCell>
                       <Badge
-                        variant={
-                          checkin.isResolved
-                            ? "default"
-                            : "destructive"
-                        }
+                        variant={checkin.isResolved ? "default" : "destructive"}
                         className="text-xs"
                       >
                         {checkin.isResolved ? "Resolved" : "Active"}

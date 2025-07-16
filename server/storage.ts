@@ -309,6 +309,23 @@ export class PostgresStorage implements IStorage {
     return result[0];
   }
 
+  // Enhanced storage method (add this to your storage service)
+  async getActiveVehicles(storeId?: number): Promise<Checkin[]> {
+    const conditions = [
+      eq(checkins.status, "In"), // or whatever your "active" status is
+    ];
+
+    if (storeId) {
+      conditions.push(eq(checkins.storeId, storeId));
+    }
+
+    return await db
+      .select()
+      .from(checkins)
+      .where(and(...conditions))
+      .orderBy(desc(checkins.createdAt));
+  }
+
   async getActiveCheckins(storeId?: number): Promise<Checkin[]> {
     const conditions = [eq(checkins.status, "In")];
     if (storeId) {
@@ -591,10 +608,7 @@ export class PostgresStorage implements IStorage {
         .select()
         .from(fraudLogs)
         .where(
-          and(
-            gte(fraudLogs.createdAt, since),
-            eq(fraudLogs.isResolved, false)
-          )
+          and(gte(fraudLogs.createdAt, since), eq(fraudLogs.isResolved, false)),
         )
         .orderBy(desc(fraudLogs.createdAt))
         .limit(100);
@@ -1056,10 +1070,7 @@ export class PostgresStorage implements IStorage {
   }
 
   async getAllCheckins(): Promise<Checkin[]> {
-    return await db
-      .select()
-      .from(checkins)
-      .orderBy(desc(checkins.createdAt));
+    return await db.select().from(checkins).orderBy(desc(checkins.createdAt));
   }
 
   async createVendorSupervisor(

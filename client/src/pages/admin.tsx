@@ -20,7 +20,8 @@ export default function Admin() {
   const { user } = useRequireAuth("admin");
   const { logout, isLoading } = useAuth();
   const { isConnected, lastMessage } = useWebSocket();
-  const [refreshKey, setRefreshKey] = useState(0);
+  // const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(Date.now());
 
   console.log("🔍 Auth Debug:", { user, isLoading }); // Debug log
 
@@ -34,7 +35,9 @@ export default function Admin() {
     queryFn: async () => {
       console.log("🔄 Fetching store counts...");
       const res = await fetch("/api/dashboard/store-counts");
+      console.log("📡 [store-counts] Fetch response:", res);
       if (!res.ok) {
+        console.error("❌ [store-counts] Fetch failed:", res.status);
         throw new Error(`Failed to fetch store counts: ${res.status}`);
       }
       const data = await res.json();
@@ -53,7 +56,9 @@ export default function Admin() {
     queryFn: async () => {
       console.log("🔄 Fetching recent activity...");
       const res = await fetch("/api/dashboard/recent-activity");
+      console.log("📡 [recent-activity] Fetch response:", res);
       if (!res.ok) {
+        console.error("❌ [recent-activity] Fetch failed:", res.status);
         throw new Error(`Failed to fetch recent activity: ${res.status}`);
       }
       const data = await res.json();
@@ -285,7 +290,7 @@ export default function Admin() {
                 ) : (
                   <div className="space-y-4">
                     {storeVehicleCounts && storeVehicleCounts.length > 0 ? (
-                      storeVehicleCounts.slice(0, 10).map((store: any) => (
+                      storeVehicleCounts.map((store: any) => (
                         <div
                           key={store.storeId}
                           className="flex items-center justify-between"
@@ -313,9 +318,14 @@ export default function Admin() {
                     ) : (
                       <div className="text-center py-8">
                         <div className="text-gray-400 mb-2">📊</div>
-                        <div className="text-sm text-gray-500">
+                        {/* <div className="text-sm text-gray-500">
                           No store data available
+                        </div> */}
+
+                        <div className="text-xs text-gray-400">
+                          Loaded {storeVehicleCounts?.length || 0} stores
                         </div>
+
                         <div className="text-xs text-gray-400 mt-1">
                           Data will appear here when vehicles check in
                         </div>
