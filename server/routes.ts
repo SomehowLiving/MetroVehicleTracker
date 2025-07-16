@@ -497,7 +497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/export/csv", async (req, res) => {
     try {
       const { startDate, endDate, storeId, format = "csv" } = req.body;
-
+      console.log("Export request:", { startDate, endDate, storeId, format });
       const start = new Date(startDate);
       const end = new Date(endDate);
       const storeIdNum = storeId ? parseInt(storeId) : undefined;
@@ -507,6 +507,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         end,
         storeIdNum,
       );
+      console.log("Checkins found:", checkins.length);
+      console.log("Sample checkin:", checkins[0]); // Log first item if exists
 
       if (format === "csv") {
         const csvData = generateCSV(checkins);
@@ -667,13 +669,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const start = new Date(startDate);
       const end = new Date(endDate);
-      const storeIdNum = storeId ? parseInt(storeId) : undefined;
+      // const storeIdNum = storeId ? parseInt(storeId) : undefined;
+      const storeIdNum =
+        storeId && storeId !== "all" ? parseInt(storeId) : undefined;
 
       const checkins = await storage.getCheckinsByDateRange(
         start,
         end,
         storeIdNum,
       );
+      console.log("Checkins data:", checkins);
       const csvData = generateCSV(checkins);
 
       const success = await sendEmail({
@@ -1332,30 +1337,53 @@ function generateCSV(data: any[]): string {
   return [headers.join(","), ...rows].join("\n");
 }
 
+// function generateExcel(data: any[]): Buffer {
+//   const XLSX = require("xlsx");
+
+//   if (data.length === 0) {
+//     // Create empty workbook with headers
+//     const worksheet = XLSX.utils.json_to_sheet([
+//       {
+//         "Vehicle Number": "",
+//         "Driver Name": "",
+//         "Vendor Name": "",
+//         "Store Name": "",
+//         "Entry Time": "",
+//         "Exit Time": "",
+//         Status: "",
+//         "Opening KM": "",
+//         "Closing KM": "",
+//         "Duration (Hours)": "",
+//       },
+//     ]);
+//     const workbook = XLSX.utils.book_new();
+//     XLSX.utils.book_append_sheet(workbook, worksheet, "Vehicle Report");
+//     return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+//   }
+
 function generateExcel(data: any[]): Buffer {
   const XLSX = require("xlsx");
 
   if (data.length === 0) {
-    // Create empty workbook with headers
-    const worksheet = XLSX.utils.json_to_sheet([
-      {
-        "Vehicle Number": "",
-        "Driver Name": "",
-        "Vendor Name": "",
-        "Store Name": "",
-        "Entry Time": "",
-        "Exit Time": "",
-        Status: "",
-        "Opening KM": "",
-        "Closing KM": "",
-        "Duration (Hours)": "",
-      },
-    ]);
+    // Create workbook with just headers (no empty row)
+    const headers = [
+      "Vehicle Number",
+      "Driver Name",
+      "Vendor Name",
+      "Store Name",
+      "Entry Time",
+      "Exit Time",
+      "Status",
+      "Opening KM",
+      "Closing KM",
+      "Duration (Hours)",
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet([headers]);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Vehicle Report");
     return XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
   }
-
   const excelData = data.map((checkin) => {
     const entryTime = checkin.createdAt
       ? new Date(checkin.createdAt).toLocaleString()

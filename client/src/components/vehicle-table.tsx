@@ -168,6 +168,11 @@ export function VehicleTable({ refreshKey, storeId }: VehicleTableProps) {
           <TableBody>
             {filteredVehicles && filteredVehicles.length > 0 ? (
               // filteredVehicles.map((vehicle: any) => (
+
+      // const sortedVehicles = [...filteredVehicles].sort(
+      //   (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      // );
+
               filteredVehicles.slice(0, 10).map((vehicle: any) => (
                 <TableRow key={vehicle.id}>
                   <TableCell>
